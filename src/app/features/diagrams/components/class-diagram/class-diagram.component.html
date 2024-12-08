@@ -1,0 +1,24 @@
+<div class="controls">
+    <button mat-raised-button color="primary" (click)="arrangeLayout()">
+        <mat-icon>sort</mat-icon>
+        Ordenar Diagrama
+    </button>
+    <select [(ngModel)]="selectedLinkType" class="relationship-select">
+        <option value="Inheritance">Herencia</option>
+        <option value="Association">Asociación</option>
+        <option value="Realization">Realización</option>
+        <option value="Dependency">Dependencia</option>
+        <option value="Aggregation">Agregación</option>
+        <option value="Composition">Composición</option>
+    </select>
+    <button mat-fab color="primary" (click)="saveDiagram()" class="save-button">
+        <mat-icon>save</mat-icon>
+        Guardar
+    </button>
+</div>
+<div class="diagram-container">
+    <div class="palette-container">
+        <div #paletteDiv class="palette"></div>
+    </div>
+    <div #diagramDiv class="diagram"></div>
+</div>

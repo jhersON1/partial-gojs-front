@@ -1,0 +1,43 @@
+<div class="diagram-container">
+    <h1>Mis Diagramas</h1>
+
+    <table mat-table [dataSource]="diagrams" class="mat-elevation-z8">
+        <!-- Title Column -->
+        <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef> Título </th>
+            <td mat-cell *matCellDef="let element"> {{element.title}} </td>
+        </ng-container>
+
+        <!-- Created At Column -->
+        <ng-container matColumnDef="createdAt">
+            <th mat-header-cell *matHeaderCellDef> Creado </th>
+            <td mat-cell *matCellDef="let element"> {{element.createdAt | date}} </td>
+        </ng-container>
+
+        <!-- Updated At Column -->
+        <ng-container matColumnDef="updatedAt">
+            <th mat-header-cell *matHeaderCellDef> Actualizado </th>
+            <td mat-cell *matCellDef="let element"> {{element.updatedAt | date}} </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef> Acciones </th>
+            <td mat-cell *matCellDef="let element">
+                <button mat-icon-button color="primary" (click)="openDiagram(element.id)">
+                    <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteDiagram(element.id)">
+                    <mat-icon>delete</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <button mat-fab color="primary" class="fab-button" (click)="createNewDiagram()">
+        <mat-icon>add</mat-icon>
+    </button>
+</div>
