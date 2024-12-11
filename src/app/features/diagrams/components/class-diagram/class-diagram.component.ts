@@ -9,7 +9,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-class-diagram',
-  standalone: true,
   imports: [MaterialModules, ReactiveFormsModule, CommonModule, FormsModule],
   templateUrl: './class-diagram.component.html',
   styleUrl: './class-diagram.component.scss'

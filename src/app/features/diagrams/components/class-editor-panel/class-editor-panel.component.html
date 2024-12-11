@@ -1,1 +1,151 @@
-<p>class-editor-panel works!</p>
+<div mat-dialog-content class="class-editor-container">
+    <h2 mat-dialog-title>Edit Class: {{data.name}}</h2>
+  
+    <form [formGroup]="editorForm" (ngSubmit)="onSubmit()">
+      <!-- Class Name -->
+      <mat-form-field class="full-width">
+        <mat-label>Class Name</mat-label>
+        <input matInput formControlName="name" required>
+        <mat-error *ngIf="editorForm.get('name')?.invalid">
+          {{getErrorMessage(editorForm.get('name'), 'Class name')}}
+        </mat-error>
+      </mat-form-field>
+  
+      <!-- Properties Section -->
+      <div class="section-container">
+        <div class="section-header">
+          <h3>Properties</h3>
+          <button mat-mini-fab color="primary" type="button" (click)="addProperty()">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+  
+        <div formArrayName="properties">
+          @for (property of properties.controls; track property) {
+            <div [formGroup]="property" class="property-container">
+              <mat-form-field>
+                <mat-label>Name</mat-label>
+                <input matInput formControlName="name" required>
+                @if (property.get('name')?.invalid && property.get('name')?.touched) {
+                  <mat-error>{{getErrorMessage(property.get('name'), 'Name')}}</mat-error>
+                }
+              </mat-form-field>
+  
+              <mat-form-field>
+                <mat-label>Type</mat-label>
+                <input matInput formControlName="type" required>
+                @if (property.get('type')?.invalid && property.get('type')?.touched) {
+                  <mat-error>{{getErrorMessage(property.get('type'), 'Type')}}</mat-error>
+                }
+              </mat-form-field>
+  
+              <mat-form-field>
+                <mat-label>Visibility</mat-label>
+                <mat-select formControlName="visibility" required>
+                  @for (opt of visibilityOptions; track opt) {
+                    <mat-option [value]="opt.value">{{opt.label}}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+  
+              <mat-form-field>
+                <mat-label>Default Value</mat-label>
+                <input matInput formControlName="default">
+              </mat-form-field>
+  
+              <button mat-icon-button color="warn" type="button" (click)="removeProperty($index)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+  
+      <!-- Methods Section -->
+      <div class="section-container">
+        <div class="section-header">
+          <h3>Methods</h3>
+          <button mat-mini-fab color="primary" type="button" (click)="addMethod()">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+  
+        <div formArrayName="methods">
+          @for (method of methods.controls; track method; let i = $index) {
+            <div [formGroup]="castToMethodFormGroup(method)" class="method-container">
+              <mat-form-field>
+                <mat-label>Name</mat-label>
+                <input matInput formControlName="name" required>
+                @if (method.get('name')?.invalid && method.get('name')?.touched) {
+                  <mat-error>{{getErrorMessage(method.get('name'), 'Name')}}</mat-error>
+                }
+              </mat-form-field>
+  
+              <mat-form-field>
+                <mat-label>Return Type</mat-label>
+                <input matInput formControlName="type">
+              </mat-form-field>
+  
+              <mat-form-field>
+                <mat-label>Visibility</mat-label>
+                <mat-select formControlName="visibility" required>
+                  @for (opt of visibilityOptions; track opt) {
+                    <mat-option [value]="opt.value">{{opt.label}}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+  
+              <!-- Parameters Section -->
+              <div class="parameters-section">
+                <div class="parameters-header">
+                  <h4>Parameters</h4>
+                  <button mat-mini-fab color="primary" type="button" (click)="addParameterToMethod(i)">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+  
+                @if (getMethodParameters(castToMethodFormGroup(method))) {
+                  <div formArrayName="parameters">
+                    @for (param of getMethodParameters(castToMethodFormGroup(method)).controls; track param; let j = $index) {
+                      <div [formGroup]="param" class="parameter-container">
+                        <mat-form-field>
+                          <mat-label>Name</mat-label>
+                          <input matInput formControlName="name" required>
+                          @if (param.get('name')?.invalid && param.get('name')?.touched) {
+                            <mat-error>{{getErrorMessage(param.get('name'), 'Parameter name')}}</mat-error>
+                          }
+                        </mat-form-field>
+  
+                        <mat-form-field>
+                          <mat-label>Type</mat-label>
+                          <input matInput formControlName="type" required>
+                          @if (param.get('type')?.invalid && param.get('type')?.touched) {
+                            <mat-error>{{getErrorMessage(param.get('type'), 'Parameter type')}}</mat-error>
+                          }
+                        </mat-form-field>
+  
+                        <button mat-icon-button color="warn" type="button" (click)="removeParameter(i, j)">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+  
+              <button mat-icon-button color="warn" type="button" (click)="removeMethod(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!editorForm.valid">
+      Save Changes
+    </button>
+  </div>
