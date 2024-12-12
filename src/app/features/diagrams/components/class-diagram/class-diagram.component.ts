@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 import * as go from 'gojs';
 import { ClassEditorPanelComponent } from '../class-editor-panel/class-editor-panel.component';
 import { DiagramNode, DiagramLink } from './interfaces/diagram.interface';
@@ -19,7 +19,7 @@ export class ClassDiagramComponent {
 
   private diagram!: go.Diagram;
   private palette!: go.Palette;
-  private dialog!: MatDialog;
+  private dialog: MatDialog = inject(MatDialog);
   
   selectedLinkType: string = 'Association';
 
