@@ -6,6 +6,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MaterialModules } from '../../../../shared/material.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { GojsDiagramService } from './services/GojsDiagram.service';
+
 
 @Component({
   selector: 'app-class-diagram',
@@ -20,17 +22,13 @@ export class ClassDiagramComponent {
   private diagram!: go.Diagram;
   private palette!: go.Palette;
   private dialog: MatDialog = inject(MatDialog);
+  private gojsService: GojsDiagramService = inject(GojsDiagramService);
   
   selectedLinkType: string = 'Association';
 
-  // Datos iniciales
-  private nodeData: DiagramNode[] = [
-    // ... (mantener tus datos nodeData existentes)
-  ];
-
-  private linkData: DiagramLink[] = [
-    // ... (mantener tus datos linkData existentes)
-  ];
+  // Datos iniciales del diagrama
+  private nodeData: DiagramNode[] = [];
+  private linkData: DiagramLink[] = [];
 
   ngAfterViewInit(): void {
     this.initializeDiagram();
@@ -38,37 +36,8 @@ export class ClassDiagramComponent {
   }
 
   private initializeDiagram(): void {
-    this.diagram = new go.Diagram(this.diagramDiv.nativeElement, {
-      'undoManager.isEnabled': true,
-      allowDrop: true,
-      initialContentAlignment: go.Spot.Center,
-      'toolManager.mouseWheelBehavior': go.ToolManager.WheelZoom,
-      "dragSelectingTool.isEnabled": false,
-      "clickCreatingTool.archetypeNodeData": {
-        name: "NewClass",
-        properties: [],
-        methods: []
-      },
-      model: new go.GraphLinksModel({
-        linkKeyProperty: 'key',
-        makeUniqueLinkKeyFunction: (model: go.GraphLinksModel, data: Object) => {
-          let k = model.linkKeyProperty;
-          if (k && typeof k === 'string') {  // Verificamos que k sea un string
-            let key = (data as any)[k];    // Usamos casting a any para acceder a la propiedad
-            if (key === undefined) {
-              key = model.makeUniqueKeyFunction!(model, data);
-              (data as any)[k] = key;    // Usamos casting a any para asignar la propiedad
-            }
-            return key;
-          }
-          return undefined;
-        }
-      })
-    });
-
+    this.diagram = this.gojsService.initializeDiagram(this.diagramDiv.nativeElement);
     this.setupDiagramEvents();
-    this.setupTemplates();
-    this.setupLinkTemplates();
     this.loadData();
   }
 
@@ -97,248 +66,11 @@ export class ClassDiagramComponent {
     this.diagram.addDiagramListener("ExternalObjectsDropped", (e) => {
       e.subject.each((node: go.Node) => {
         if (node instanceof go.Node) {
-          const newKey = this.generateUniqueKey();
+          const newKey = this.gojsService.generateUniqueKey(this.diagram);
           this.diagram.model.setDataProperty(node.data, "key", newKey);
         }
       });
     });
-  }
-
-  private generateUniqueKey(): number {
-    let maxKey = 0;
-    this.diagram.nodes.each((node) => {
-      if (node.data.key > maxKey) maxKey = node.data.key;
-    });
-    return maxKey + 1;
-  }
-
-  private setupTemplates(): void {
-    // Property template
-    const propertyTemplate = new go.Panel('Horizontal')
-      .add(
-        new go.TextBlock({ isMultiline: false, editable: false, width: 12 })
-          .bind('text', 'visibility', this.convertVisibility),
-        new go.TextBlock({ isMultiline: false, editable: true })
-          .bindTwoWay('text', 'name')
-          .bind('isUnderline', 'scope', s => s?.[0] === 'c'),
-        new go.TextBlock('')
-          .bind('text', 'type', t => t ? ': ' : ''),
-        new go.TextBlock({ isMultiline: false, editable: true })
-          .bindTwoWay('text', 'type'),
-        new go.TextBlock({ isMultiline: false, editable: false })
-          .bind('text', 'default', s => s ? ' = ' + s : '')
-      );
-
-    // Method template
-    const methodTemplate = new go.Panel('Horizontal')
-      .add(
-        new go.TextBlock({ isMultiline: false, editable: false, width: 12 })
-          .bind('text', 'visibility', this.convertVisibility),
-        new go.TextBlock({ isMultiline: false, editable: true })
-          .bindTwoWay('text', 'name')
-          .bind('isUnderline', 'scope', s => s?.[0] === 'c'),
-        new go.TextBlock('()')
-          .bind('text', 'parameters', (parr: any[]) => {
-            let s = '(';
-            for (let i = 0; i < parr?.length || 0; i++) {
-              const param = parr[i];
-              if (i > 0) s += ', ';
-              s += param.name + ': ' + param.type;
-            }
-            return s + ')';
-          }),
-        new go.TextBlock('')
-          .bind('text', 'type', t => t ? ': ' : ''),
-        new go.TextBlock({ isMultiline: false, editable: true })
-          .bindTwoWay('text', 'type')
-      );
-
-    // Node template
-    this.diagram.nodeTemplate =
-      new go.Node('Auto', {
-        locationSpot: go.Spot.Center,
-        // Mantenemos estas propiedades para el nodo
-        cursor: 'move',
-        selectionAdorned: true,
-        resizable: true,
-        resizeObjectName: 'PANEL',
-        layoutConditions: go.Part.LayoutStandard & ~go.Part.LayoutNodeSized,
-
-      })
-        .bind(new go.Binding('location', 'loc', go.Point.parse).makeTwoWay(go.Point.stringify))
-        .add(
-          new go.Shape('Rectangle', {
-            fill: 'lightyellow',
-            stroke: 'black',
-            strokeWidth: 2,
-            name: 'SHAPE',
-            // Configuramos el Shape como port
-            portId: '',  // un portId vacío hace que todo el shape sea un port
-            fromLinkable: true,
-            toLinkable: true,
-            fromSpot: go.Spot.AllSides,
-            toSpot: go.Spot.AllSides,
-            cursor: 'pointer'  // cursor pointer en el borde
-          }),
-          new go.Panel('Table', {
-            name: 'PANEL',
-            defaultRowSeparatorStroke: 'black',
-            defaultAlignment: go.Spot.Left,
-            margin: new go.Margin(5, 3, 5, 3),
-            cursor: 'move'
-          })
-            .addRowDefinition(0, new go.RowColumnDefinition({  // Cambiamos .add por .addRowDefinition
-              row: 0,
-              separatorStroke: 'black',
-              background: 'lightyellow',
-              minimum: 20
-            }))
-            .add(
-              new go.TextBlock({
-                row: 0,
-                columnSpan: 2,
-                margin: 3,
-                alignment: go.Spot.Center,
-                font: 'bold 12pt sans-serif',
-                isMultiline: false,
-                editable: true
-              })
-                .bindTwoWay('text', 'name'),
-              new go.TextBlock('Properties', {
-                row: 1,
-                font: 'italic 10pt sans-serif'
-              })
-                .bind('visible', 'visible', (v) => !v),
-              new go.Panel('Vertical', {
-                name: 'PROPERTIES',
-                row: 1,
-                margin: 3,
-                stretch: go.GraphObject.Horizontal,
-                defaultAlignment: go.Spot.Left,
-                background: 'lightyellow',
-                itemTemplate: propertyTemplate
-              })
-                .bind('itemArray', 'properties'),
-              new go.TextBlock('Methods', {
-                row: 2,
-                font: 'italic 10pt sans-serif'
-              })
-                .bind('visible', 'visible', (v) => !v),
-              new go.Panel('Vertical', {
-                name: 'METHODS',
-                row: 2,
-                margin: 3,
-                stretch: go.GraphObject.Horizontal,
-                defaultAlignment: go.Spot.Left,
-                background: 'lightyellow',
-                itemTemplate: methodTemplate
-              })
-                .bind('itemArray', 'methods')
-            )
-        );
-  }
-
-  private setupLinkTemplates(): void {
-    // Template base para todos los tipos de relaciones
-    const baseLinkTemplate = new go.Link({
-      routing: go.Link.AvoidsNodes,
-      curve: go.Link.JumpOver,
-      corner: 10,
-      toShortLength: 4,
-      relinkableFrom: true,
-      relinkableTo: true,
-      reshapable: true,
-      resegmentable: true,
-      mouseEnter: (e: go.InputEvent, obj: go.GraphObject) => {
-        const link = obj.part as go.Link;
-        this.highlightLink(link, true);
-      },
-      mouseLeave: (e: go.InputEvent, obj: go.GraphObject) => {
-        const link = obj.part as go.Link;
-        this.highlightLink(link, false);
-      }
-    });
-
-    // Configuración de templates específicos
-    this.setupLinkTemplateMap(baseLinkTemplate);
-
-    // Template por defecto
-    this.diagram.linkTemplate = baseLinkTemplate.copy();
-  }
-
-  private setupLinkTemplateMap(baseTemplate: go.Link): void {
-    const templates: { [key: string]: go.Link } = {
-      'Inheritance': this.createInheritanceTemplate(baseTemplate),
-      'Association': this.createAssociationTemplate(baseTemplate),
-      'Realization': this.createRealizationTemplate(baseTemplate),
-      'Dependency': this.createDependencyTemplate(baseTemplate),
-      'Aggregation': this.createAggregationTemplate(baseTemplate),
-      'Composition': this.createCompositionTemplate(baseTemplate)
-    };
-
-    Object.entries(templates).forEach(([key, template]) => {
-      this.diagram.linkTemplateMap.add(key, template);
-    });
-  }
-
-  private createInheritanceTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5 }),
-      new go.Shape({ toArrow: 'Triangle', fill: 'white', scale: 1.2 })
-    );
-  }
-
-  private createAssociationTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5 }),
-      new go.Shape({ toArrow: 'OpenTriangle', scale: 1 })
-    );
-  }
-
-  private createRealizationTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5, strokeDashArray: [4, 2] }),
-      new go.Shape({ toArrow: 'Triangle', fill: 'white', scale: 1.2 })
-    );
-  }
-
-  private createDependencyTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5, strokeDashArray: [4, 2] }),
-      new go.Shape({ toArrow: 'OpenTriangle', scale: 1 })
-    );
-  }
-
-  private createAggregationTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5 }),
-      new go.Shape({ fromArrow: 'Diamond', fill: 'white', scale: 1.2 })
-    );
-  }
-
-  private createCompositionTemplate(base: go.Link): go.Link {
-    return base.copy().add(
-      new go.Shape({ strokeWidth: 1.5 }),
-      new go.Shape({ fromArrow: 'Diamond', fill: 'black', scale: 1.2 })
-    );
-  }
-
-  private highlightLink(link: go.Link | null, show: boolean): void {
-    if (!link) return;
-    const highlight = link.findObject('HIGHLIGHT');
-    if (highlight instanceof go.Shape) {
-      highlight.stroke = show ? 'blue' : 'transparent';
-    }
-  }
-
-  private convertVisibility(v: string): string {
-    const visibilityMap: { [key: string]: string } = {
-      'public': '+',
-      'private': '-',
-      'protected': '#',
-      'package': '~'
-    };
-    return visibilityMap[v] || v;
   }
 
   private openClassEditor(node: DiagramNode): void {
@@ -371,57 +103,55 @@ export class ClassDiagramComponent {
   }
 
   private initializePalette(): void {
-    this.palette = new go.Palette(this.paletteDiv.nativeElement, {
-      nodeTemplateMap: this.diagram.nodeTemplateMap,
-      model: new go.GraphLinksModel([
-        {
-          key: 'newClass',
-          name: 'NewClass',
-          properties: [],
-          methods: []
-        }
-      ])
-    });
+    this.palette = this.gojsService.initializePalette(
+      this.paletteDiv.nativeElement,
+      this.diagram.nodeTemplateMap as go.Map<string, go.Node>
+    );
   }
 
   public arrangeLayout(): void {
-    const layout = new go.TreeLayout({
-      angle: 90,
-      path: go.TreePath.Source,
-      setsPortSpot: true,
-      setsChildPortSpot: true,
-      arrangement: go.TreeArrangement.Horizontal
-    });
-
-    this.diagram.startTransaction("arrange layout");
-    layout.doLayout(this.diagram);
-    this.diagram.commitTransaction("arrange layout");
+    this.gojsService.arrangeLayout(this.diagram);
   }
 
   private loadData(): void {
-    const model = new go.GraphLinksModel({
-      copiesArrays: true,
-      copiesArrayObjects: true,
-      linkKeyProperty: 'key',
-      linkCategoryProperty: 'relationship',
-      nodeDataArray: this.nodeData,
-      linkDataArray: this.linkData
-    });
-
-    this.diagram.model = model;
+    this.gojsService.loadDiagramData(this.diagram, this.nodeData, this.linkData);
   }
 
   saveDiagram() {
-    console.log('Saving diagram', this.diagram);
+    const model = this.diagram.model;
+    const modelJson = model.toJson();
+    console.log('Diagram saved:', modelJson);
+    // Aquí puedes implementar la lógica para guardar el diagrama
+    // Por ejemplo, enviar modelJson a un servicio de backend
+  }
 
+  exportDiagram() {
+    const modelJson = this.diagram.model.toJson();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(modelJson);
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "class-diagram.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
+  importDiagram(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result;
+        if (typeof content === 'string') {
+          const json = JSON.parse(content);
+          this.diagram.model = go.Model.fromJson(json);
+        }
+      };
+      reader.readAsText(file);
+    }
   }
 
   ngOnDestroy(): void {
-    if (this.diagram) {
-      this.diagram.div = null;
-    }
-    if (this.palette) {
-      this.palette.div = null;
-    }
+    this.gojsService.cleanup(this.diagram, this.palette);
   }
 }
