@@ -59,7 +59,7 @@
                   </button>
                   <button mat-icon-button color="warn" 
                           [matTooltip]="'Eliminar ' + element.title"
-                          (click)="confirmDelete(element)">
+                          (click)="confirmDelete(element, $event)">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>

@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environments';
 import { CreateDiagram, Diagram } from '../interfaces/diagram.interface';
 import { TokenService } from '../../../auth/services/token.service';
 import { API_DIAGRAM_ROUTES } from '../../constans';
+import { SaveDiagram } from '../components/class-diagram/interfaces/diagram.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -93,7 +94,8 @@ export class DiagramService {
       );
   }
 
-  saveDiagram(body: CreateDiagram, diagramId: string): Observable<Diagram> {
+  saveDiagram(body: SaveDiagram, diagramId: string): Observable<Diagram> {
+    console.log('body', body);
     const url = `${this.baseUrl}/diagrams/${diagramId}`;
     const token = this.tokenService.getToken();
 

@@ -5,7 +5,7 @@ export const diagramRoutes: Routes = [
     path: '',
     children: [
       {
-        path: 'class-diagram',
+        path: 'class-diagram/:id',
         loadComponent: () => import('./components/class-diagram/class-diagram.component')
           .then(m => m.ClassDiagramComponent)
       },

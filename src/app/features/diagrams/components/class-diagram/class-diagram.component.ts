@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, ViewChild } from '@angular/core';
 import * as go from 'gojs';
 import { ClassEditorPanelComponent } from '../class-editor-panel/class-editor-panel.component';
 import { DiagramNode, DiagramLink, SaveDiagram } from './interfaces/diagram.interface';
@@ -9,6 +9,8 @@ import { CommonModule } from '@angular/common';
 import { GojsDiagramService } from './services/GojsDiagram.service';
 import Swal from 'sweetalert2';
 import { DiagramService } from '../../services/diagram.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-class-diagram',
@@ -16,7 +18,7 @@ import { DiagramService } from '../../services/diagram.service';
   templateUrl: './class-diagram.component.html',
   styleUrl: './class-diagram.component.scss'
 })
-export class ClassDiagramComponent {
+export class ClassDiagramComponent implements OnInit {
   @ViewChild('diagramDiv') private diagramDiv!: ElementRef<HTMLDivElement>;
   @ViewChild('paletteDiv') private paletteDiv!: ElementRef<HTMLDivElement>;
 
@@ -25,12 +27,55 @@ export class ClassDiagramComponent {
   private dialog: MatDialog = inject(MatDialog);
   private gojsService: GojsDiagramService = inject(GojsDiagramService);
   private diagramService: DiagramService = inject(DiagramService);
+  private route: ActivatedRoute = inject(ActivatedRoute);
 
   selectedLinkType: string = 'Association';
 
   // Datos iniciales del diagrama
   private nodeData: DiagramNode[] = [];
   private linkData: DiagramLink[] = [];
+
+  ngOnInit() {
+    const diagramId = this.route.snapshot.params['id'];
+
+    if (diagramId) {
+      this.diagramService.getDiagram(diagramId).pipe(
+        catchError((error) => {
+          console.error('Error loading diagram:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo cargar el diagrama.',
+          });
+          return EMPTY;
+        })
+      ).subscribe({
+        next: (diagram) => {
+          console.log('Diagram loaded:', diagram);
+          console.log('Diagram content:', diagram.content);
+          if (diagram && diagram.content) {
+            try {
+              const diagramData = go.Model.fromJson(diagram.content) as go.GraphLinksModel;
+              this.nodeData = (diagramData.nodeDataArray || []).map(data => data as DiagramNode);
+              this.linkData = (diagramData.linkDataArray || []).map(link => link as DiagramLink);
+
+              // Si el diagrama ya está inicializado, actualizamos su contenido
+              if (this.diagram) {
+                this.loadData();
+              }
+            } catch (error) {
+              console.error('Error parsing diagram data:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'El diagrama está corrupto o en un formato inválido.',
+              });
+            }
+          }
+        }
+      });
+    }
+  }
 
   ngAfterViewInit(): void {
     this.initializeDiagram();
@@ -40,7 +85,7 @@ export class ClassDiagramComponent {
   private initializeDiagram(): void {
     this.diagram = this.gojsService.initializeDiagram(this.diagramDiv.nativeElement);
     this.setupDiagramEvents();
-    this.loadData();
+    //this.loadData();
   }
 
   private setupDiagramEvents(): void {
@@ -120,51 +165,42 @@ export class ClassDiagramComponent {
   }
 
   async saveDiagram() {
-    const result = await Swal.fire({
-      title: 'Guardar Diagrama',
-      input: 'text',
-      inputLabel: 'Nombre del Diagrama',
-      inputPlaceholder: 'Ingrese un nombre para su diagrama',
-      showCancelButton: true,
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debe ingresar un nombre para el diagrama';
-        }
-        return null;
+    const model = this.diagram.model;
+    const modelJson = model.toJson();
+
+    const diagramId = this.route.snapshot.params['id'];
+
+    if (!diagramId) {
+      console.error('No diagram ID found in URL');
+      return;
+    }
+
+    const body: any = {
+      content: modelJson
+    }
+
+    this.diagramService.saveDiagram(body, diagramId).pipe(
+      catchError((error) => {
+        console.error('Error saving diagram:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo guardar el diagrama. Por favor, intente nuevamente.',
+        });
+        return EMPTY;
+      })
+    ).subscribe({
+      next: (savedDiagram) => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Diagrama guardado',
+          text: 'El diagrama se guardó exitosamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
     });
 
-    if (result.isConfirmed) {
-      const model = this.diagram.model;
-      const modelJson = model.toJson();
-
-      const diagramData: SaveDiagram = {
-        title: result.value,
-        content: modelJson
-      };
-
-      // this.diagramService.saveDiagram(diagramData)
-      //   .pipe(
-      //     catchError((error) => {
-      //       Swal.fire({
-      //         icon: 'error',
-      //         title: 'Error',
-      //         text: 'No se pudo guardar el diagrama.',
-      //       });
-      //       return EMPTY;
-      //     })
-      //   )
-      //   .subscribe({
-      //     next: (savedDiagram) => {
-      //       Swal.fire({
-      //         icon: 'success',
-      //         title: 'Éxito',
-      //         text: 'Diagrama guardado correctamente',
-      //         timer: 2000
-      //       });
-      //     }
-      //   });
-    }
   }
 
   exportDiagram() {

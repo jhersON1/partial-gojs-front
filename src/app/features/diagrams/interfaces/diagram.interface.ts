@@ -7,6 +7,8 @@ export interface Diagram {
 }
 
 export interface CreateDiagram {
-  title: string;
+  title?: string;
   content: any;
 }
+
+export interface UpdateDiagram extends CreateDiagram {}

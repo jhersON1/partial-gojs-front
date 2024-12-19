@@ -114,7 +114,7 @@ export class DiagramListComponent implements AfterViewInit {
           )
           .subscribe((diagram) => {
             if (diagram) {
-              this.router.navigate(['/diagrams/class-diagram'])
+              this.router.navigate([`/diagrams/class-diagram/${diagram.id}`])
                 .then(() => {
                   // Mostrar notificación de éxito
                   Swal.fire({
@@ -136,7 +136,9 @@ export class DiagramListComponent implements AfterViewInit {
     }
   }
 
-  async confirmDelete(diagram: Diagram): Promise<void> {
+  async confirmDelete(diagram: Diagram, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
     try {
       const result = await Swal.fire({
         title: '¿Está seguro?',
@@ -195,7 +197,7 @@ export class DiagramListComponent implements AfterViewInit {
     }
 
     this.diagramService.setCurrentDiagramId(diagramId);
-    this.router.navigate(['/diagrams/class-diagram'])
+    this.router.navigate([`/diagrams/class-diagram/${diagramId}`])
       .catch((error: any) => console.error('Navigation error:', error));
   }
 
