@@ -15,7 +15,7 @@ import { MatPaginator } from '@angular/material/paginator';
   templateUrl: './diagram-list.component.html',
   styleUrl: './diagram-list.component.scss'
 })
-export class DiagramListComponent implements AfterViewInit{
+export class DiagramListComponent implements AfterViewInit {
   private diagramService = inject(DiagramService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
@@ -44,6 +44,7 @@ export class DiagramListComponent implements AfterViewInit{
   }
 
   loadDiagrams(): void {
+    console.log('Loading diagrams...');
     this.isLoading = true;
     this.error = null;
 
@@ -62,7 +63,7 @@ export class DiagramListComponent implements AfterViewInit{
       .subscribe((diagrams: Diagram[]) => {
         this.diagrams.data = diagrams;
         // Aplicar ordenamiento predeterminado por fecha de actualización
-        this.diagrams.data = this.diagrams.data.sort((a, b) => 
+        this.diagrams.data = this.diagrams.data.sort((a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
       });
@@ -171,20 +172,19 @@ export class DiagramListComponent implements AfterViewInit{
           return of(null);
         })
       )
-      .subscribe((response) => {
-        if (response !== null) {
-          // Actualizar la lista localmente sin recargar
-          this.diagrams.data = this.diagrams.data.filter(d => d.id !== diagramId);
-          
-          // Mostrar notificación de éxito
-          Swal.fire({
-            icon: 'success',
-            title: 'Diagrama Eliminado',
-            text: 'El diagrama ha sido eliminado exitosamente.',
-            timer: 2000,
-            showConfirmButton: false
-          });
-        }
+      .subscribe(() => {
+
+        this.diagrams.data = this.diagrams.data.filter(d => d.id !== diagramId);
+
+        // Mostrar notificación de éxito
+        Swal.fire({
+          icon: 'success',
+          title: 'Diagrama Eliminado',
+          text: 'El diagrama ha sido eliminado exitosamente.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
       });
   }
 

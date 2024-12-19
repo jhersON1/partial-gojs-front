@@ -72,7 +72,7 @@
   gap: 8px;
   
   .diagram-icon, .date-icon {
-    color: rgba(0, 0, 0, 0.54);
+    color: rgba(21, 33, 196, 0.54);
   }
 }
 
@@ -84,6 +84,7 @@
   
   &:hover {
     opacity: 1;
+    z-index: 1;
   }
 }
 

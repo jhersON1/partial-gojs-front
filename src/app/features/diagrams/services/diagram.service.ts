@@ -23,7 +23,7 @@ export class DiagramService {
 
   getDiagrams(): Observable<Diagram[]>{
     const url = `${this.baseUrl}/diagrams/allByUser`;
-    const token = localStorage.getItem('token');
+    const token = this.tokenService.getToken();
 
     if (!token) return of([]);
 
@@ -34,7 +34,7 @@ export class DiagramService {
 
   getDiagram(diagramId: string): Observable<Diagram>{
     const url = `${this.baseUrl}/diagrams/${diagramId}`;
-    const token = localStorage.getItem('token');
+    const token = this.tokenService.getToken();
 
     if (!token) return of();
 
@@ -45,7 +45,7 @@ export class DiagramService {
 
   deleteDiagram(diagramId: string) {
     const url = `${this.baseUrl}/diagrams/${diagramId}`;
-    const token = localStorage.getItem('token');
+    const token = this.tokenService.getToken();
 
     if (!token) return of();
 
@@ -95,7 +95,7 @@ export class DiagramService {
 
   saveDiagram(body: CreateDiagram, diagramId: string): Observable<Diagram> {
     const url = `${this.baseUrl}/diagrams/${diagramId}`;
-    const token = localStorage.getItem('token');
+    const token = this.tokenService.getToken();
 
     if (!token) return of();
 
@@ -104,6 +104,7 @@ export class DiagramService {
     return this.http.patch<Diagram>(url, body, {headers})
       .pipe(
         map((diagram: Diagram) => {
+          console.log('diagram', diagram);
           this.clearCurrentDiagramId();
           this.setCurrentDiagramId(diagram.id)
           return diagram;

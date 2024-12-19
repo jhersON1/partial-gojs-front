@@ -26,3 +26,8 @@ export interface DiagramLink {
     to: number;
     relationship?: string;
 }
+
+export interface SaveDiagram {
+    title: string;
+    content: string;
+}

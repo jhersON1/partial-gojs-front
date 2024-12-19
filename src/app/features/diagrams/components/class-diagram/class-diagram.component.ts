@@ -1,13 +1,14 @@
 import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 import * as go from 'gojs';
 import { ClassEditorPanelComponent } from '../class-editor-panel/class-editor-panel.component';
-import { DiagramNode, DiagramLink } from './interfaces/diagram.interface';
+import { DiagramNode, DiagramLink, SaveDiagram } from './interfaces/diagram.interface';
 import { MatDialog } from '@angular/material/dialog';
 import { MaterialModules } from '../../../../shared/material.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { GojsDiagramService } from './services/GojsDiagram.service';
-
+import Swal from 'sweetalert2';
+import { DiagramService } from '../../services/diagram.service';
 
 @Component({
   selector: 'app-class-diagram',
@@ -23,7 +24,8 @@ export class ClassDiagramComponent {
   private palette!: go.Palette;
   private dialog: MatDialog = inject(MatDialog);
   private gojsService: GojsDiagramService = inject(GojsDiagramService);
-  
+  private diagramService: DiagramService = inject(DiagramService);
+
   selectedLinkType: string = 'Association';
 
   // Datos iniciales del diagrama
@@ -117,12 +119,52 @@ export class ClassDiagramComponent {
     this.gojsService.loadDiagramData(this.diagram, this.nodeData, this.linkData);
   }
 
-  saveDiagram() {
-    const model = this.diagram.model;
-    const modelJson = model.toJson();
-    console.log('Diagram saved:', modelJson);
-    // Aquí puedes implementar la lógica para guardar el diagrama
-    // Por ejemplo, enviar modelJson a un servicio de backend
+  async saveDiagram() {
+    const result = await Swal.fire({
+      title: 'Guardar Diagrama',
+      input: 'text',
+      inputLabel: 'Nombre del Diagrama',
+      inputPlaceholder: 'Ingrese un nombre para su diagrama',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debe ingresar un nombre para el diagrama';
+        }
+        return null;
+      }
+    });
+
+    if (result.isConfirmed) {
+      const model = this.diagram.model;
+      const modelJson = model.toJson();
+
+      const diagramData: SaveDiagram = {
+        title: result.value,
+        content: modelJson
+      };
+
+      // this.diagramService.saveDiagram(diagramData)
+      //   .pipe(
+      //     catchError((error) => {
+      //       Swal.fire({
+      //         icon: 'error',
+      //         title: 'Error',
+      //         text: 'No se pudo guardar el diagrama.',
+      //       });
+      //       return EMPTY;
+      //     })
+      //   )
+      //   .subscribe({
+      //     next: (savedDiagram) => {
+      //       Swal.fire({
+      //         icon: 'success',
+      //         title: 'Éxito',
+      //         text: 'Diagrama guardado correctamente',
+      //         timer: 2000
+      //       });
+      //     }
+      //   });
+    }
   }
 
   exportDiagram() {
