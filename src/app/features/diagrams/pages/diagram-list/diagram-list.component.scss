@@ -1,0 +1,154 @@
+.diagram-dashboard {
+  padding: 24px;
+  height: 100vh;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header-card {
+  background-color: white;
+  border-radius: 8px;
+  
+  mat-card-header {
+    padding: 16px;
+    
+    mat-card-title h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 500;
+    }
+    
+    mat-card-subtitle {
+      margin-top: 4px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+  }
+}
+
+.content-container {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.diagram-table {
+  width: 100%;
+  
+  .mat-mdc-header-cell {
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+    background-color: #fafafa;
+    padding: 16px;
+  }
+  
+  .mat-mdc-cell {
+    padding: 16px;
+  }
+}
+
+.diagram-row {
+  transition: background-color 200ms ease;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.title-cell, .date-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .diagram-icon, .date-icon {
+    color: rgba(21, 33, 196, 0.54);
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  opacity: 0.7;
+  transition: opacity 200ms ease;
+  
+  &:hover {
+    opacity: 1;
+    z-index: 1;
+  }
+}
+
+.empty-state-card {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border-radius: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  
+  .empty-icon {
+    font-size: 64px;
+    height: 64px;
+    width: 64px;
+    color: rgba(0, 0, 0, 0.38);
+    margin-bottom: 16px;
+  }
+  
+  h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
+  
+  p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.fab-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+}
+
+mat-paginator {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+// Custom scrollbar styles
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+  
+  &:hover {
+    background: #666;
+  }
+}

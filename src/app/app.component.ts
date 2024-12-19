@@ -27,7 +27,7 @@ export class AppComponent {
         return;
 
       case AuthStatus.authenticated:
-        this.router.navigateByUrl('/diagram-list').then(() => true);
+        this.router.navigateByUrl('/diagrams').then(() => true);
         return;
 
       case AuthStatus.notAuthenticated:

@@ -1,0 +1,51 @@
+<div class="main-container">
+    <mat-toolbar class="diagram-toolbar">
+      <div class="toolbar-section">
+        <button mat-icon-button (click)="arrangeLayout()" matTooltip="Ordenar Diagrama">
+          <mat-icon>sort</mat-icon>
+        </button>
+      </div>
+  
+      <mat-divider [vertical]="true"></mat-divider>
+  
+      <div class="toolbar-section relationships">
+        <mat-form-field appearance="outline" class="relationship-select">
+          <mat-label>Tipo de Relación</mat-label>
+          <mat-select [(ngModel)]="selectedLinkType">
+            <mat-option value="Inheritance">Herencia</mat-option>
+            <mat-option value="Association">Asociación</mat-option>
+            <mat-option value="Realization">Realización</mat-option>
+            <mat-option value="Dependency">Dependencia</mat-option>
+            <mat-option value="Aggregation">Agregación</mat-option>
+            <mat-option value="Composition">Composición</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+  
+      <span class="toolbar-spacer"></span>
+  
+      <div class="toolbar-section">
+        <button mat-raised-button color="primary" (click)="saveDiagram()" matTooltip="Guardar Diagrama">
+          <mat-icon>save</mat-icon>
+          Guardar
+        </button>
+      </div>
+    </mat-toolbar>
+  
+    <div class="content-container">
+      <mat-card class="palette-container">
+        <mat-card-header>
+          <mat-card-title>Elementos</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div #paletteDiv class="palette" id="paletteDiv"></div>
+        </mat-card-content>
+      </mat-card>
+  
+      <mat-card class="diagram-container">
+        <mat-card-content>
+          <div #diagramDiv class="diagram" id="diagramDiv"></div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>

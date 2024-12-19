@@ -3,6 +3,8 @@ import { MaterialModules } from '../../../shared/material.module';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import Swal from 'sweetalert2';
+import { Router } from '@angular/router';
+
 
 @Component({
   selector: 'app-login-page',
@@ -13,7 +15,8 @@ import Swal from 'sweetalert2';
 export default class LoginPageComponent {
   private fb: FormBuilder = inject(FormBuilder);
   private authService = inject(AuthService);
-
+  private router: Router = inject(Router);
+  
   hide = signal(true);
   clickEvent(event: MouseEvent) {
     this.hide.set(!this.hide());
@@ -31,7 +34,11 @@ export default class LoginPageComponent {
     this.authService.login(email, password)
       .subscribe({
         next: () => {
-          //TODO: navigate to diagram page
+          this.router.navigateByUrl('/diagram').then(success => {
+            if (!success) {
+              console.error('Navigation failed. Current auth status:', this.authService.authStatus());
+            }
+          });
         },
         error: (message) => {
           Swal.fire('Error', message, 'error').then(r => 'sweet alert it`s failing');

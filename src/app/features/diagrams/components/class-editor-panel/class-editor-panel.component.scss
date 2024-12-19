@@ -1,0 +1,78 @@
+.class-editor-container {
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .full-width {
+    width: 100%;
+  }
+  
+  .section-container {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  
+    h3 {
+      margin: 0;
+    }
+  }
+  
+  .property-container,
+  .method-container {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr 2fr auto;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  .parameters-section {
+    grid-column: 1 / -1;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #ffffff;
+    border-radius: 4px;
+  }
+  
+  .parameters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  
+    h4 {
+      margin: 0;
+    }
+  }
+  
+  .parameter-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  mat-dialog-content {
+    min-height: 300px;
+  }
+  
+  mat-dialog-actions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+  }
+  

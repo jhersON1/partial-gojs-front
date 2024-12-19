@@ -1,0 +1,113 @@
+.main-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f5;
+}
+
+.diagram-toolbar {
+  background-color: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toolbar-spacer {
+    flex: 1 1 auto;
+  }
+
+  .relationships {
+    .relationship-select {
+      width: 200px;
+      margin-bottom: -1.25em;  // Compensate for mat-form-field padding
+    }
+  }
+
+  mat-divider {
+    height: 32px;
+    margin: 0 8px;
+  }
+}
+
+.content-container {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.palette-container {
+  width: 250px;
+  overflow: hidden;
+  
+  mat-card-header {
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  mat-card-content {
+    padding: 0;
+    height: calc(100% - 70px);  // Compensate for header height
+  }
+
+  .palette {
+    width: 100%;
+    height: 100%;
+    background-color: white;
+  }
+}
+
+.diagram-container {
+  flex: 1;
+  overflow: hidden;
+  
+  mat-card-content {
+    padding: 0;
+    height: 100%;
+  }
+
+  .diagram {
+    width: 100%;
+    height: 100%;
+    background-color: white;
+  }
+}
+
+// Material Design elevation on hover
+.mat-mdc-card {
+  transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+                0 8px 10px 1px rgba(0, 0, 0, 0.14),
+                0 3px 14px 2px rgba(0, 0, 0, 0.12);
+  }
+}
+
+// Customize scrollbars
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
