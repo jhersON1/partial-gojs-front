@@ -1,0 +1,260 @@
+/* invite-dialog.component.scss */
+
+// Variables
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+$border-radius: 8px;
+$transition-duration: 200ms;
+
+// Contenedor principal
+.dialog-container {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+// Estilos del título
+.dialog-title {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .subtitle {
+    margin: $spacing-xs 0 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+  }
+
+  &.success-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+// Contenido del diálogo
+.dialog-content {
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+// Lista de invitaciones
+.invitations-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.invitation-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  .email-field {
+    flex: 1;
+    margin: 0;
+
+    &.error {
+      .mat-form-field-outline {
+        color: #f44336;
+      }
+    }
+  }
+
+  .verified-icon {
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all $transition-duration ease;
+
+    &.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+// Botón de añadir
+.add-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-xs;
+
+  button {
+    mat-icon {
+      margin-right: $spacing-xs;
+    }
+  }
+
+  .limit-hint {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 12px;
+    margin-left: $spacing-xs;
+  }
+}
+
+// Tarjeta de permisos
+.permissions-card {
+  background-color: #fafafa;
+  border-radius: $border-radius;
+
+  mat-card-header {
+    padding: $spacing-md;
+    
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+
+  mat-card-content {
+    padding: 0 $spacing-md $spacing-md;
+  }
+}
+
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  .permission-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      opacity: 0.6;
+      cursor: help;
+    }
+  }
+}
+
+// Sección de URL
+.url-container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin: $spacing-md 0;
+
+  .url-field {
+    flex: 1;
+    margin: 0;
+
+    input {
+      color: rgba(0, 0, 0, 0.87);
+    }
+  }
+}
+
+.url-instructions {
+  margin: 0 0 $spacing-md;
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.info-section {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background-color: rgba(33, 150, 243, 0.08);
+  border-radius: $border-radius;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .info-text {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.87);
+    line-height: 1.4;
+  }
+}
+
+// Botones de acción
+.dialog-actions {
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 0;
+  gap: $spacing-sm;
+
+  .button-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    mat-spinner {
+      margin-left: $spacing-sm;
+    }
+  }
+}
+
+// Estilos específicos de Material
+:host ::ng-deep {
+  .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: none !important;
+  }
+
+  // Estilos para los snackbars
+  .success-snackbar {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .error-snackbar {
+    background-color: #f44336;
+    color: white;
+  }
+
+  .info-snackbar {
+    background-color: #2196f3;
+    color: white;
+  }
+}
+
+// Animaciones
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dialog-content {
+  animation: fadeIn $transition-duration ease-out;
+}
