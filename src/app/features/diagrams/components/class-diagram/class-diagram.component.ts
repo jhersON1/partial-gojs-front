@@ -11,6 +11,8 @@ import Swal from 'sweetalert2';
 import { DiagramService } from '../../services/diagram.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, EMPTY } from 'rxjs';
+import { InviteDialogComponent } from './components/invite-dialog/invite-dialog.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-class-diagram',
@@ -28,6 +30,7 @@ export class ClassDiagramComponent implements OnInit {
   private gojsService: GojsDiagramService = inject(GojsDiagramService);
   private diagramService: DiagramService = inject(DiagramService);
   private route: ActivatedRoute = inject(ActivatedRoute);
+  private snackBar = inject(MatSnackBar);
 
   selectedLinkType: string = 'Association';
 
@@ -227,6 +230,32 @@ export class ClassDiagramComponent implements OnInit {
       };
       reader.readAsText(file);
     }
+  }
+
+  inviteCollaborators(): void {
+    const dialogRef = this.dialog.open(InviteDialogComponent, {
+      width: '500px',
+      disableClose: true,
+      data: {
+        diagramId: this.route.snapshot.params['id']
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.snackBar.open('Invitaciones enviadas correctamente', 'Cerrar', {
+          duration: 3000
+        });
+        
+        // Si hay un sessionId en la URL, actualizar el estado del diagrama
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('sessionId');
+        if (sessionId) {
+          // this.initializeCollaborativeSession(sessionId);
+          console.log('Collaborative session initialized:', sessionId);
+        }
+      }
+    });
   }
 
   ngOnDestroy(): void {
