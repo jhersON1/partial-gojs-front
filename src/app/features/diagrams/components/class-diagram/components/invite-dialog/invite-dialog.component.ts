@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormArray, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectorRef, Component, DestroyRef, inject } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, FormArray, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
 import { debounceTime, distinctUntilChanged, filter, switchMap, take } from 'rxjs';
 import { EditorService } from '../../services/editor.service';
@@ -19,7 +19,7 @@ interface InvitationPermissions {
 
 @Component({
   selector: 'app-invite-dialog',
-  imports: [MaterialModules, ReactiveFormsModule, CommonModule],
+  imports: [MaterialModules, ReactiveFormsModule, CommonModule, FormsModule],
   templateUrl: './invite-dialog.component.html',
   styleUrl: './invite-dialog.component.scss'
 })
@@ -31,7 +31,8 @@ export class InviteDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<InviteDialogComponent>);
   private readonly snackBar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
-
+  private readonly destroyRef = inject(DestroyRef);
+  
   protected invitationForm!: FormGroup;
   protected showUrlSection = false;
   protected collaborationUrl = '';
@@ -69,29 +70,29 @@ export class InviteDialogComponent {
     this.invitations.controls.forEach(group => {
       const emailControl = group.get('email');
       console.log('emailControl:', emailControl);
-      // emailControl?.valueChanges.pipe(
-      //   debounceTime(300),
-      //   distinctUntilChanged(),
-      //   filter(email => {
-      //     if (!email) return false;
-      //     return new RegExp(this.validationsService.emailPattern).test(email);
-      //   }),
-      //   switchMap(email => this.userService.checkUserEmail(email).pipe(
-      //     take(1)
-      //   )),
-      //   takeUntilDestroyed()
-      // ).subscribe({
-      //   next: (response) => {
-      //     this.verifiedEmails.add(response.email);
-      //     this.showSuccessMessage(`Usuario encontrado: ${response.nombre} ${response.apellido}`);
-      //     this.cdr.markForCheck();
-      //   },
-      //   error: (error) => {
-      //     emailControl.setErrors({ notRegistered: true });
-      //     this.showErrorMessage(error);
-      //     this.cdr.markForCheck();
-      //   }
-      // });
+      emailControl?.valueChanges.pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        filter(email => {
+          if (!email) return false;
+          return new RegExp(this.validationsService.emailPattern).test(email);
+        }),
+        switchMap(email => this.userService.checkUserEmail(email).pipe(
+          take(1)
+        )),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
+        next: (response) => {
+          this.verifiedEmails.add(response.email);
+          this.showSuccessMessage(`Usuario encontrado: ${response.nombre} ${response.apellido}`);
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          emailControl.setErrors({ notRegistered: true });
+          this.showErrorMessage(error);
+          this.cdr.markForCheck();
+        }
+      });
     });
   }
 
