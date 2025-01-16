@@ -83,6 +83,20 @@ export class ClassDiagramComponent implements OnInit {
           }
         }
       });
+
+      this.route.queryParams.subscribe(async params => {
+        const sessionId = params['sessionId'];
+        if (sessionId) {
+          console.log('[ClassDiagramComponent] Session ID found:', sessionId);
+          try {
+            await this.collaborationService.joinSession(sessionId);
+            this.isCollaborativeMode = true;
+            this.setupCollaborativeMode();
+          } catch (error) {
+            console.error('[ClassDiagramComponent] Error joining session:', error);
+          }
+        }
+      });
     }
 
     this.route.queryParams.subscribe(async params => {
@@ -110,6 +124,7 @@ export class ClassDiagramComponent implements OnInit {
     this.setupDiagramEvents();
     //this.loadData();
   }
+
 
   private setupDiagramEvents(): void {
     // Evento de doble clic para editar nodos
@@ -140,6 +155,16 @@ export class ClassDiagramComponent implements OnInit {
           this.diagram.model.setDataProperty(node.data, "key", newKey);
         }
       });
+    });
+
+    this.diagram.addModelChangedListener((e: go.ChangedEvent) => {
+      if (!this.isProcessingRemoteChange && e.isTransactionFinished) {
+        const json = this.diagram.model.toJson();
+        this.collaborationService.sendChanges({
+          delta: e.change,
+          diagramData: json
+        });
+      }
     });
 
     this.diagram.addModelChangedListener((e: go.ChangedEvent) => {
@@ -239,7 +264,7 @@ export class ClassDiagramComponent implements OnInit {
   private setupCollaborativeMode(): void {
     this.collaborationService.getChanges().subscribe({
       next: (change) => {
-        console.log('llega cambio', change);
+        console.log('[ClassDiagramComponent] Received diagram change:', change);
         if (this.diagram && !this.isProcessingRemoteChange) {
           console.log('[ClassDiagramComponent] Applying remote change');
           this.isProcessingRemoteChange = true;
@@ -255,6 +280,17 @@ export class ClassDiagramComponent implements OnInit {
       },
       error: (error) => {
         console.error('[ClassDiagramComponent] Error receiving changes:', error);
+      }
+    });
+
+    // Suscribirse a actualizaciones de usuarios
+    this.collaborationService.getUserUpdates().subscribe({
+      next: (update) => {
+        console.log('[ClassDiagramComponent] Received user update:', update);
+        // Aquí puedes manejar las actualizaciones de usuarios si es necesario
+      },
+      error: (error) => {
+        console.error('[ClassDiagramComponent] Error receiving user updates:', error);
       }
     });
   }
@@ -311,7 +347,9 @@ export class ClassDiagramComponent implements OnInit {
     });
   }
 
-  showInviteDialog(): void {
+  async showInviteDialog() {
+    console.log('[ClassDiagramComponent] Opening invite dialog');
+
     const dialogRef = this.dialog.open(InviteDialogComponent, {
       width: '500px',
       disableClose: true,

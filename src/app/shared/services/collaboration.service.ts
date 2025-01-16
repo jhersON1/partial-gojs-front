@@ -28,6 +28,9 @@ export class CollaborationService {
 
   async initializeCollaborativeSession(invitedUsers: string[], initialData: any): Promise<string> {
     console.log('[CollaborationService] Initializing collaborative session');
+    console.log('[CollaborationService] Invited users:', invitedUsers);
+    console.log('[CollaborationService] Initial data:', initialData);
+    
     const currentUser = this.authService.currentUser();
 
     if (!currentUser) {
@@ -36,30 +39,85 @@ export class CollaborationService {
     }
 
     try {
+      // Guardar el contenido actual
       this.setCurrentDiagramData(initialData);
 
+      // Crear sesión con contenido inicial
       const createResponse = await this.websocketService.createSession(
         currentUser.email,
         initialData
       );
 
+      console.log('[CollaborationService] Create session response:', createResponse);
+
       this.sessionId = createResponse.sessionId;
       this.creatorEmail = currentUser.email;
       console.log('[CollaborationService] Session created:', this.sessionId);
 
-      await this.websocketService.addAllowedUsers(
-        this.sessionId!,
+      if (!this.sessionId) {
+        throw new Error('No session ID received');
+      }
+
+      // Verificar que invitedUsers es un array y no está vacío
+      if (!Array.isArray(invitedUsers) || invitedUsers.length === 0) {
+        console.warn('[CollaborationService] No users to invite or invalid invitedUsers:', invitedUsers);
+        return this.sessionId;
+      }
+
+      // Añadir usuarios permitidos
+      const addUsersResponse = await this.websocketService.addAllowedUsers(
+        this.sessionId,
         currentUser.email,
         invitedUsers
       );
+
+      console.log('[CollaborationService] Add allowed users response:', addUsersResponse);
       console.log('[CollaborationService] Users added to session:', invitedUsers);
 
-      return this.sessionId!;
+      return this.sessionId;
     } catch (error) {
       console.error('[CollaborationService] Error initializing session:', error);
       throw error;
     }
   }
+
+  // async initializeCollaborativeSession(invitedUsers: string[], initialData: any): Promise<string> {
+  //   console.log('[CollaborationService] Initializing collaborative session');
+  //   const currentUser = this.authService.currentUser();
+
+  //   if (!currentUser) {
+  //     console.error('[CollaborationService] No authenticated user found');
+  //     throw new Error('No user authenticated');
+  //   }
+
+  //   try {
+  //     // Guardar el contenido actual
+  //     this.setCurrentDiagramData(initialData);
+
+  //     // Crear sesión con contenido inicial
+  //     const createResponse = await this.websocketService.createSession(
+  //       currentUser.email,
+  //       initialData
+  //     );
+
+  //     this.sessionId = createResponse.sessionId;
+  //     this.creatorEmail = currentUser.email;
+  //     console.log('[CollaborationService] Session created:', this.sessionId);
+
+  //     // Añadir usuarios permitidos
+  //     await this.websocketService.addAllowedUsers(
+  //       this.sessionId!,
+  //       currentUser.email,
+  //       invitedUsers
+  //     );
+  //     console.log('[CollaborationService] Users added to session:', invitedUsers);
+
+  //     return this.sessionId!;
+  //   } catch (error) {
+  //     console.error('[CollaborationService] Error initializing session:', error);
+  //     throw error;
+  //   }
+  // }
 
   async joinSession(sessionId: string): Promise<void> {
     console.log('[CollaborationService] Joining session:', sessionId);
@@ -93,12 +151,17 @@ export class CollaborationService {
   getChanges(): Observable<DiagramChange> {
     console.log('[CollaborationService] Setting up changes observer');
     return this.websocketService.onDiagramChanges().pipe(
-      map(change => ({
-        delta: change.delta,
-        diagramData: change.diagramData,
-        userEmail: change.userEmail,
-        timestamp: change.timestamp
-      }))
+      map(change => {
+        if (change.diagramData) {
+          this.setCurrentDiagramData(change.diagramData);
+        }
+        return {
+          delta: change.delta,
+          diagramData: change.diagramData,
+          userEmail: change.userEmail,
+          timestamp: change.timestamp
+        };
+      })
     );
   }
 
@@ -126,7 +189,8 @@ export class CollaborationService {
         changes.delta,
         changes.diagramData
       );
-      
+      console.log('[CollaborationService] Change sent to WebSocket with full diagram data');
+
     } catch (error) {
       console.error('[CollaborationService] Error sending changes:', error);
     } finally {
@@ -135,12 +199,14 @@ export class CollaborationService {
   }
 
   getUserUpdates(): Observable<CollaborationUpdate> {
+    console.log('[CollaborationService] Setting up user updates stream');
     return this.websocketService.onCollaborationUpdates().pipe(
       tap(update => console.log('[CollaborationService] Received collaboration update:', update))
     );
   }
 
   async updateUserPermissions(targetUserEmail: string, newPermissions: any): Promise<void> {
+    console.log('[CollaborationService] Starting permission update for:', targetUserEmail);
     if (!this.sessionId || !this.authService.currentUser()) {
       throw new Error('No active session or user');
     }
@@ -168,5 +234,4 @@ export class CollaborationService {
   getCreatorEmail(): string | null {
     return this.creatorEmail;
   }
-
 }

@@ -126,39 +126,6 @@ export class WebsocketService {
     });
   }
 
-  sendDiagramChanges(
-    sessionId: string,
-    userEmail: string,
-    delta: any,
-    diagramData?: any
-  ): void {
-    console.log('[WebsocketService] Sending changes:', {
-      sessionId,
-      userEmail,
-      delta,
-      diagramData
-    });
-
-    this.socket.emit('diagramChanges', {
-      sessionId,
-      userEmail,
-      delta,
-      diagramData
-    });
-  }
-
-  onDiagramChanges(): Observable<any> {
-    console.log('[WebsocketService] Setting up diagram changes listener');
-    const changes$ = new Subject<any>();
-
-    this.socket.on('diagramChanges', (data) => {
-      console.log('[WebsocketService] Received changes:', data);
-      changes$.next(data);
-    });
-
-    return changes$.asObservable();
-  }
-
   async updatePermissions(data: {
     sessionId: string;
     targetUserEmail: string;
@@ -190,6 +157,39 @@ export class WebsocketService {
         }
       });
     });
+  }
+
+  sendDiagramChanges(
+    sessionId: string,
+    userEmail: string,
+    delta: any,
+    diagramData?: any
+  ): void {
+    console.log('[WebsocketService] Sending diagram changes:', {
+      sessionId,
+      userEmail,
+      delta,
+      diagramData
+    });
+
+    this.socket.emit('diagramChanges', {
+      sessionId,
+      userEmail,
+      delta,
+      diagramData
+    });
+  }
+
+  onDiagramChanges(): Observable<any> {
+    console.log('[WebsocketService] Setting up diagram changes listener');
+    const changes$ = new Subject<any>();
+
+    this.socket.on('diagramChanges', (data) => {
+      console.log('[WebsocketService] Received changes:', data);
+      changes$.next(data);
+    });
+
+    return changes$.asObservable();
   }
 
   disconnect(): void {
