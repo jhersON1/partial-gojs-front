@@ -13,16 +13,21 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, EMPTY } from 'rxjs';
 import { InviteDialogComponent } from './components/invite-dialog/invite-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { CollaborationPanelComponent } from '../collaboration-panel/collaboration-panel.component';
+import { CollaborationService } from '../../../../shared/services/collaboration.service';
 
 @Component({
   selector: 'app-class-diagram',
-  imports: [MaterialModules, ReactiveFormsModule, CommonModule, FormsModule],
+  imports: [MaterialModules, ReactiveFormsModule, CommonModule, FormsModule, CollaborationPanelComponent],
   templateUrl: './class-diagram.component.html',
   styleUrl: './class-diagram.component.scss'
 })
 export class ClassDiagramComponent implements OnInit {
   @ViewChild('diagramDiv') private diagramDiv!: ElementRef<HTMLDivElement>;
   @ViewChild('paletteDiv') private paletteDiv!: ElementRef<HTMLDivElement>;
+  @ViewChild('collaborationPanel') collaborationPanel!: CollaborationPanelComponent;
+  isCollaborativeMode = false;
+  isProcessingRemoteChange = false;
 
   private diagram!: go.Diagram;
   private palette!: go.Palette;
@@ -31,6 +36,7 @@ export class ClassDiagramComponent implements OnInit {
   private diagramService: DiagramService = inject(DiagramService);
   private route: ActivatedRoute = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
+  private collaborationService = inject(CollaborationService);
 
   selectedLinkType: string = 'Association';
 
@@ -78,6 +84,20 @@ export class ClassDiagramComponent implements OnInit {
         }
       });
     }
+
+    this.route.queryParams.subscribe(async params => {
+      const sessionId = params['sessionId'];
+      if (sessionId) {
+        console.log('[ClassDiagramComponent] Session ID found:', sessionId);
+        try {
+          await this.collaborationService.joinSession(sessionId);
+          this.isCollaborativeMode = true;
+          this.setupCollaborativeMode();
+        } catch (error) {
+          console.error('[ClassDiagramComponent] Error joining session:', error);
+        }
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -120,6 +140,16 @@ export class ClassDiagramComponent implements OnInit {
           this.diagram.model.setDataProperty(node.data, "key", newKey);
         }
       });
+    });
+
+    this.diagram.addModelChangedListener((e: go.ChangedEvent) => {
+      if (!this.isProcessingRemoteChange && e.isTransactionFinished) {
+        const json = this.diagram.model.toJson();
+        this.collaborationService.sendChanges({
+          delta: e.change,
+          diagramData: json
+        });
+      }
     });
   }
 
@@ -206,6 +236,29 @@ export class ClassDiagramComponent implements OnInit {
 
   }
 
+  private setupCollaborativeMode(): void {
+    this.collaborationService.getChanges().subscribe({
+      next: (change) => {
+        console.log('llega cambio', change);
+        if (this.diagram && !this.isProcessingRemoteChange) {
+          console.log('[ClassDiagramComponent] Applying remote change');
+          this.isProcessingRemoteChange = true;
+
+          // Actualizar el diagrama con los cambios recibidos
+          if (change.diagramData) {
+            const model = go.Model.fromJson(change.diagramData);
+            this.diagram.model = model;
+          }
+
+          this.isProcessingRemoteChange = false;
+        }
+      },
+      error: (error) => {
+        console.error('[ClassDiagramComponent] Error receiving changes:', error);
+      }
+    });
+  }
+
   exportDiagram() {
     const modelJson = this.diagram.model.toJson();
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(modelJson);
@@ -246,7 +299,7 @@ export class ClassDiagramComponent implements OnInit {
         this.snackBar.open('Invitaciones enviadas correctamente', 'Cerrar', {
           duration: 3000
         });
-        
+
         // Si hay un sessionId en la URL, actualizar el estado del diagrama
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('sessionId');
@@ -258,7 +311,43 @@ export class ClassDiagramComponent implements OnInit {
     });
   }
 
+  showInviteDialog(): void {
+    const dialogRef = this.dialog.open(InviteDialogComponent, {
+      width: '500px',
+      disableClose: true,
+      data: {
+        diagramId: this.route.snapshot.params['id']
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result) {
+        try {
+          const diagramData = this.diagram.model.toJson();
+          await this.collaborationService.initializeCollaborativeSession(
+            result.invitedUsers,
+            diagramData
+          );
+          this.isCollaborativeMode = true;
+          this.setupCollaborativeMode();
+        } catch (error) {
+          console.error('[ClassDiagramComponent] Error initializing collaboration:', error);
+        }
+      }
+    });
+  }
+
+  toggleCollaborationPanel(): void {
+    if (this.collaborationPanel) {
+      this.collaborationPanel.toggle();
+    }
+  }
+
   ngOnDestroy(): void {
     this.gojsService.cleanup(this.diagram, this.palette);
+
+    if (this.isCollaborativeMode) {
+      this.collaborationService.disconnect();
+    }
   }
 }

@@ -1,0 +1,25 @@
+.collaboration-drawer {
+  width: 300px;
+  padding: 16px;
+}
+
+.user-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ccc;
+
+  &.online {
+    background-color: #4caf50;
+  }
+}
+
+.user-item {
+  &:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+.permissions-section {
+  border-color: #e0e0e0;
+}
