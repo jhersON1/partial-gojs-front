@@ -158,21 +158,15 @@ export class ClassDiagramComponent implements OnInit {
     });
 
     this.diagram.addModelChangedListener((e: go.ChangedEvent) => {
+      // Solo enviamos cambios si no estamos procesando cambios remotos
       if (!this.isProcessingRemoteChange && e.isTransactionFinished) {
-        const json = this.diagram.model.toJson();
+        // Creamos un delta de cambios en lugar de enviar todo el modelo
+        const delta = (this.diagram.model as go.GraphLinksModel).toIncrementalJson(e);
+        const currentJson = this.diagram.model.toJson();
+        
         this.collaborationService.sendChanges({
-          delta: e.change,
-          diagramData: json
-        });
-      }
-    });
-
-    this.diagram.addModelChangedListener((e: go.ChangedEvent) => {
-      if (!this.isProcessingRemoteChange && e.isTransactionFinished) {
-        const json = this.diagram.model.toJson();
-        this.collaborationService.sendChanges({
-          delta: e.change,
-          diagramData: json
+          delta: delta,
+          diagramData: currentJson
         });
       }
     });
@@ -262,35 +256,42 @@ export class ClassDiagramComponent implements OnInit {
   }
 
   private setupCollaborativeMode(): void {
+    // Bandera para controlar la inicialización
+    let isInitializing = true;
+  
     this.collaborationService.getChanges().subscribe({
       next: (change) => {
-        console.log('[ClassDiagramComponent] Received diagram change:', change);
+        console.log('[ClassDiagramComponent] Received diagram change from:', change.userEmail);
+        
         if (this.diagram && !this.isProcessingRemoteChange) {
-          console.log('[ClassDiagramComponent] Applying remote change');
-          this.isProcessingRemoteChange = true;
-
-          // Actualizar el diagrama con los cambios recibidos
-          if (change.diagramData) {
-            const model = go.Model.fromJson(change.diagramData);
-            this.diagram.model = model;
+          try {
+            console.log('[ClassDiagramComponent] Applying remote change');
+            this.isProcessingRemoteChange = true;
+  
+            if (change.diagramData) {
+              const model = go.Model.fromJson(change.diagramData);
+              
+              // Si estamos inicializando, simplemente establecemos el modelo
+              if (isInitializing) {
+                this.diagram.model = model;
+                isInitializing = false;
+                return;
+              }
+  
+              // Para cambios subsecuentes, actualizamos el modelo de forma controlada
+              this.diagram.startTransaction('update model');
+              this.diagram.model.applyIncrementalJson(change.delta);
+              this.diagram.commitTransaction('update model');
+            }
+          } catch (error) {
+            console.error('[ClassDiagramComponent] Error applying changes:', error);
+          } finally {
+            this.isProcessingRemoteChange = false;
           }
-
-          this.isProcessingRemoteChange = false;
         }
       },
       error: (error) => {
         console.error('[ClassDiagramComponent] Error receiving changes:', error);
-      }
-    });
-
-    // Suscribirse a actualizaciones de usuarios
-    this.collaborationService.getUserUpdates().subscribe({
-      next: (update) => {
-        console.log('[ClassDiagramComponent] Received user update:', update);
-        // Aquí puedes manejar las actualizaciones de usuarios si es necesario
-      },
-      error: (error) => {
-        console.error('[ClassDiagramComponent] Error receiving user updates:', error);
       }
     });
   }
