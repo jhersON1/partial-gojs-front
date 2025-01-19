@@ -46,11 +46,12 @@ export class ClassDiagramComponent implements OnInit {
 
   ngOnInit() {
     const diagramId = this.route.snapshot.params['id'];
-
+    console.log('[ClassDiagramComponent] Initializing with diagram ID:', diagramId);
+  
     if (diagramId) {
       this.diagramService.getDiagram(diagramId).pipe(
         catchError((error) => {
-          console.error('Error loading diagram:', error);
+          console.error('[ClassDiagramComponent] Error loading diagram:', error);
           Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -60,20 +61,18 @@ export class ClassDiagramComponent implements OnInit {
         })
       ).subscribe({
         next: (diagram) => {
-          console.log('Diagram loaded:', diagram);
-          console.log('Diagram content:', diagram.content);
+          console.log('[ClassDiagramComponent] Diagram loaded:', diagram);
           if (diagram && diagram.content) {
             try {
               const diagramData = go.Model.fromJson(diagram.content) as go.GraphLinksModel;
               this.nodeData = (diagramData.nodeDataArray || []).map(data => data as DiagramNode);
               this.linkData = (diagramData.linkDataArray || []).map(link => link as DiagramLink);
-
-              // Si el diagrama ya está inicializado, actualizamos su contenido
+  
               if (this.diagram) {
                 this.loadData();
               }
             } catch (error) {
-              console.error('Error parsing diagram data:', error);
+              console.error('[ClassDiagramComponent] Error parsing diagram data:', error);
               Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -83,7 +82,8 @@ export class ClassDiagramComponent implements OnInit {
           }
         }
       });
-
+  
+      // Verificar sessionId después de cargar el diagrama
       this.route.queryParams.subscribe(async params => {
         const sessionId = params['sessionId'];
         if (sessionId) {
@@ -98,20 +98,6 @@ export class ClassDiagramComponent implements OnInit {
         }
       });
     }
-
-    this.route.queryParams.subscribe(async params => {
-      const sessionId = params['sessionId'];
-      if (sessionId) {
-        console.log('[ClassDiagramComponent] Session ID found:', sessionId);
-        try {
-          await this.collaborationService.joinSession(sessionId);
-          this.isCollaborativeMode = true;
-          this.setupCollaborativeMode();
-        } catch (error) {
-          console.error('[ClassDiagramComponent] Error joining session:', error);
-        }
-      }
-    });
   }
 
   ngAfterViewInit(): void {
@@ -163,7 +149,7 @@ export class ClassDiagramComponent implements OnInit {
         // Creamos un delta de cambios en lugar de enviar todo el modelo
         const delta = (this.diagram.model as go.GraphLinksModel).toIncrementalJson(e);
         const currentJson = this.diagram.model.toJson();
-        
+
         this.collaborationService.sendChanges({
           delta: delta,
           diagramData: currentJson
@@ -256,7 +242,7 @@ export class ClassDiagramComponent implements OnInit {
   }
 
   private setupCollaborativeMode(): void {
-    // Bandera para controlar la inicialización
+    console.log('[ClassDiagramComponent] Setting up collaborative mode');
     let isInitializing = true;
   
     this.collaborationService.getChanges().subscribe({
@@ -265,23 +251,22 @@ export class ClassDiagramComponent implements OnInit {
         
         if (this.diagram && !this.isProcessingRemoteChange) {
           try {
-            console.log('[ClassDiagramComponent] Applying remote change');
+            console.log('[ClassDiagramComponent] Applying remote change:', change);
             this.isProcessingRemoteChange = true;
   
             if (change.diagramData) {
               const model = go.Model.fromJson(change.diagramData);
               
-              // Si estamos inicializando, simplemente establecemos el modelo
               if (isInitializing) {
+                console.log('[ClassDiagramComponent] Initializing with received model');
                 this.diagram.model = model;
                 isInitializing = false;
-                return;
+              } else {
+                console.log('[ClassDiagramComponent] Applying incremental changes');
+                this.diagram.startTransaction('update model');
+                this.diagram.model.applyIncrementalJson(change.delta);
+                this.diagram.commitTransaction('update model');
               }
-  
-              // Para cambios subsecuentes, actualizamos el modelo de forma controlada
-              this.diagram.startTransaction('update model');
-              this.diagram.model.applyIncrementalJson(change.delta);
-              this.diagram.commitTransaction('update model');
             }
           } catch (error) {
             console.error('[ClassDiagramComponent] Error applying changes:', error);
@@ -295,7 +280,7 @@ export class ClassDiagramComponent implements OnInit {
       }
     });
   }
-
+  
   exportDiagram() {
     const modelJson = this.diagram.model.toJson();
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(modelJson);
@@ -362,15 +347,31 @@ export class ClassDiagramComponent implements OnInit {
     dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         try {
+          // Importante: Usamos el modelo actual del diagrama
           const diagramData = this.diagram.model.toJson();
-          await this.collaborationService.initializeCollaborativeSession(
+          console.log('[ClassDiagramComponent] Initializing collaboration with diagram data:', diagramData);
+
+          const sessionId = await this.collaborationService.initializeCollaborativeSession(
             result.invitedUsers,
             diagramData
           );
+
+          console.log('[ClassDiagramComponent] Collaboration session created:', sessionId);
+
+          // Actualizamos la URL con el sessionId
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('sessionId', sessionId);
+          window.history.pushState({}, '', currentUrl.toString());
+
           this.isCollaborativeMode = true;
           this.setupCollaborativeMode();
         } catch (error) {
           console.error('[ClassDiagramComponent] Error initializing collaboration:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo iniciar la sesión colaborativa.',
+          });
         }
       }
     });

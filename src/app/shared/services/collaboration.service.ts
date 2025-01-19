@@ -28,9 +28,6 @@ export class CollaborationService {
 
   async initializeCollaborativeSession(invitedUsers: string[], initialData: any): Promise<string> {
     console.log('[CollaborationService] Initializing collaborative session');
-    console.log('[CollaborationService] Invited users:', invitedUsers);
-    console.log('[CollaborationService] Initial data:', initialData);
-    
     const currentUser = this.authService.currentUser();
 
     if (!currentUser) {
@@ -39,42 +36,28 @@ export class CollaborationService {
     }
 
     try {
-      // Guardar el contenido actual
-      this.setCurrentDiagramData(initialData);
-
-      // Crear sesión con contenido inicial
-      const createResponse = await this.websocketService.createSession(
-        currentUser.email,
-        initialData
-      );
-
-      console.log('[CollaborationService] Create session response:', createResponse);
-
-      this.sessionId = createResponse.sessionId;
-      this.creatorEmail = currentUser.email;
-      console.log('[CollaborationService] Session created:', this.sessionId);
-
+      // Solo creamos una nueva sesión si no hay una existente
       if (!this.sessionId) {
-        throw new Error('No session ID received');
+        console.log('[CollaborationService] Creating new session with data:', initialData);
+        const createResponse = await this.websocketService.createSession(
+          currentUser.email,
+          initialData
+        );
+
+        this.sessionId = createResponse.sessionId;
+        this.creatorEmail = currentUser.email;
+        console.log('[CollaborationService] Session created:', this.sessionId);
+
+        // Añadir usuarios permitidos
+        const addUsersResponse = await this.websocketService.addAllowedUsers(
+          this.sessionId!,
+          currentUser.email,
+          invitedUsers
+        );
+        console.log('[CollaborationService] Users added to session:', addUsersResponse);
       }
 
-      // Verificar que invitedUsers es un array y no está vacío
-      if (!Array.isArray(invitedUsers) || invitedUsers.length === 0) {
-        console.warn('[CollaborationService] No users to invite or invalid invitedUsers:', invitedUsers);
-        return this.sessionId;
-      }
-
-      // Añadir usuarios permitidos
-      const addUsersResponse = await this.websocketService.addAllowedUsers(
-        this.sessionId,
-        currentUser.email,
-        invitedUsers
-      );
-
-      console.log('[CollaborationService] Add allowed users response:', addUsersResponse);
-      console.log('[CollaborationService] Users added to session:', invitedUsers);
-
-      return this.sessionId;
+      return this.sessionId!;
     } catch (error) {
       console.error('[CollaborationService] Error initializing session:', error);
       throw error;
@@ -124,7 +107,6 @@ export class CollaborationService {
     const currentUser = this.authService.currentUser();
 
     if (!currentUser) {
-      console.error('[CollaborationService] No user authenticated');
       throw new Error('No user authenticated');
     }
 
@@ -133,17 +115,13 @@ export class CollaborationService {
       this.sessionId = sessionId;
 
       if (response.currentContent?.diagramData) {
-        console.log('[CollaborationService] Received initial data:', response.currentContent.diagramData);
-        this.setCurrentDiagramData(response.currentContent.diagramData);
-      }
-
-      if (response.isCreator) {
-        this.creatorEmail = currentUser.email;
+        console.log('[CollaborationService] Received initial diagram data');
+        this.currentDiagramData = response.currentContent.diagramData;
       }
 
       console.log('[CollaborationService] Join successful');
     } catch (error) {
-      console.error('[CollaborationService] Join error:', error);
+      console.error('[CollaborationService] Error joining session:', error);
       throw error;
     }
   }
@@ -166,8 +144,6 @@ export class CollaborationService {
   }
 
   sendChanges(changes: { delta: any, diagramData: any }): void {
-    console.log('[CollaborationService] Processing changes:', changes);
-
     if (!this.sessionId || this.isProcessingChanges) {
       console.warn('[CollaborationService] Cannot send changes - no session or processing');
       return;
@@ -181,16 +157,14 @@ export class CollaborationService {
 
     try {
       this.isProcessingChanges = true;
-      this.setCurrentDiagramData(changes.diagramData);
-
+      console.log('[CollaborationService] Sending changes for session:', this.sessionId);
+      
       this.websocketService.sendDiagramChanges(
         this.sessionId,
         currentUser.email,
         changes.delta,
         changes.diagramData
       );
-      console.log('[CollaborationService] Change sent to WebSocket with full diagram data');
-
     } catch (error) {
       console.error('[CollaborationService] Error sending changes:', error);
     } finally {
