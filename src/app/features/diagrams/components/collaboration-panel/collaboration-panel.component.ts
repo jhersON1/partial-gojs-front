@@ -1,9 +1,10 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../auth/services/auth.service';
 import { CollaborationUser, PermissionKey, CollaborationUpdate, UserPermissions } from '../../../../core/interfaces';
 import { CollaborationService } from '../../../../shared/services/collaboration.service';
 import { MaterialModules } from '../../../../shared/material.module';
+import { MatDrawer } from '@angular/material/sidenav';
 
 @Component({
   selector: 'app-collaboration-panel',
@@ -14,8 +15,9 @@ import { MaterialModules } from '../../../../shared/material.module';
 export class CollaborationPanelComponent implements OnInit, OnDestroy {
   private collaborationService = inject(CollaborationService);
   private authService = inject(AuthService);
+  @ViewChild('drawer') drawer!: MatDrawer;
 
-  drawer!: any; // Referencia al mat-drawer
+
   users = signal<CollaborationUser[]>([]);
   currentUserEmail = signal<string>('');
   canManagePermissions = signal<boolean>(false);

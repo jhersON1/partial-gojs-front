@@ -1,32 +1,38 @@
 <mat-drawer #drawer class="collaboration-drawer" mode="over" position="end">
     <div class="p-4">
-        <h2 class="text-xl mb-4">Usuarios Conectados</h2>
-
-        <div class="users-list">
-            @for (user of users(); track user.email) {
-            <div class="user-item mb-3 p-3 border rounded">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="user-status" [class.online]="user.isActive"></span>
-                    <span class="user-name">{{ user.displayName || user.email }}</span>
-                    @if (user.isCreator) {
-                    <mat-chip>Creador</mat-chip>
-                    }
-                </div>
-
-                @if (canManagePermissions() && user.email !== currentUserEmail()) {
-                <div class="permissions-section mt-2 pl-4 border-l-2">
-                    @for (permission of permissions; track permission.key) {
-                    <div class="flex items-center gap-2 mb-2">
-                        <mat-checkbox [checked]="user.permissions[permission.key]"
-                            (change)="onPermissionChange(permission.key, user)">
-                            {{ permission.label }}
-                        </mat-checkbox>
-                    </div>
-                    }
-                </div>
-                }
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Usuarios Conectados</h2>
+        <button mat-icon-button (click)="drawer.close()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+  
+      <div class="users-list">
+        @for (user of users(); track user.email) {
+          <div class="user-item mb-3 p-3 border rounded">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="user-status" [class.online]="user.isActive"></span>
+              <span class="user-name">{{ user.displayName || user.email }}</span>
+              @if (user.isCreator) {
+                <mat-chip color="primary">Creador</mat-chip>
+              }
             </div>
+  
+            @if (canManagePermissions() && user.email !== currentUserEmail()) {
+              <div class="permissions-section mt-2">
+                @for (permission of permissions; track permission.key) {
+                  <div class="flex items-center gap-2 mb-2">
+                    <mat-checkbox 
+                      [checked]="user.permissions[permission.key]"
+                      (change)="onPermissionChange(permission.key, user)">
+                      {{ permission.label }}
+                    </mat-checkbox>
+                  </div>
+                }
+              </div>
             }
-        </div>
+          </div>
+        }
+      </div>
     </div>
-</mat-drawer>
+  </mat-drawer>

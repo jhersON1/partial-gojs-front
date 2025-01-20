@@ -365,6 +365,11 @@ export class ClassDiagramComponent implements OnInit {
 
           this.isCollaborativeMode = true;
           this.setupCollaborativeMode();
+          if (this.collaborationPanel) {
+            setTimeout(() => {
+              this.collaborationPanel.toggle();
+            }, 0);
+          }
         } catch (error) {
           console.error('[ClassDiagramComponent] Error initializing collaboration:', error);
           Swal.fire({
@@ -379,7 +384,10 @@ export class ClassDiagramComponent implements OnInit {
 
   toggleCollaborationPanel(): void {
     if (this.collaborationPanel) {
+      console.log('Toggling collaboration panel');
       this.collaborationPanel.toggle();
+    } else {
+      console.error('Collaboration panel not found');
     }
   }
 
