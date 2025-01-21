@@ -15,15 +15,16 @@ export interface DiagramMethod {
 }
 
 export interface DiagramNode {
-    key: number;
+    isInterface: any;
+    key: any;
     name: string;
     properties: DiagramProperty[];
     methods: DiagramMethod[];
 }
 
 export interface DiagramLink {
-    from: number;
-    to: number;
+    from: any;
+    to: any;
     relationship?: string;
 }
 
@@ -31,3 +32,4 @@ export interface SaveDiagram {
     title: string;
     content: string;
 }
+  

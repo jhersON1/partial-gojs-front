@@ -47,7 +47,7 @@ export class ClassDiagramComponent implements OnInit {
   ngOnInit() {
     const diagramId = this.route.snapshot.params['id'];
     console.log('[ClassDiagramComponent] Initializing with diagram ID:', diagramId);
-  
+
     if (diagramId) {
       this.diagramService.getDiagram(diagramId).pipe(
         catchError((error) => {
@@ -67,7 +67,7 @@ export class ClassDiagramComponent implements OnInit {
               const diagramData = go.Model.fromJson(diagram.content) as go.GraphLinksModel;
               this.nodeData = (diagramData.nodeDataArray || []).map(data => data as DiagramNode);
               this.linkData = (diagramData.linkDataArray || []).map(link => link as DiagramLink);
-  
+
               if (this.diagram) {
                 this.loadData();
               }
@@ -82,7 +82,7 @@ export class ClassDiagramComponent implements OnInit {
           }
         }
       });
-  
+
       // Verificar sessionId después de cargar el diagrama
       this.route.queryParams.subscribe(async params => {
         const sessionId = params['sessionId'];
@@ -244,19 +244,19 @@ export class ClassDiagramComponent implements OnInit {
   private setupCollaborativeMode(): void {
     console.log('[ClassDiagramComponent] Setting up collaborative mode');
     let isInitializing = true;
-  
+
     this.collaborationService.getChanges().subscribe({
       next: (change) => {
         console.log('[ClassDiagramComponent] Received diagram change from:', change.userEmail);
-        
+
         if (this.diagram && !this.isProcessingRemoteChange) {
           try {
             console.log('[ClassDiagramComponent] Applying remote change:', change);
             this.isProcessingRemoteChange = true;
-  
+
             if (change.diagramData) {
               const model = go.Model.fromJson(change.diagramData);
-              
+
               if (isInitializing) {
                 console.log('[ClassDiagramComponent] Initializing with received model');
                 this.diagram.model = model;
@@ -280,16 +280,396 @@ export class ClassDiagramComponent implements OnInit {
       }
     });
   }
+
+  async exportDiagram(): Promise<void> {
+    const result = await Swal.fire({
+      title: 'Exportar Diagrama',
+      input: 'text',
+      inputLabel: 'Nombre del diagrama',
+      inputPlaceholder: 'Ingrese el nombre para el archivo',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debe ingresar un nombre para el diagrama';
+        }
+        return null;
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    const diagramName = result.value;
+    const model = this.diagram.model as go.GraphLinksModel;
+    const nodes = model.nodeDataArray as DiagramNode[];
+    const links = model.linkDataArray as DiagramLink[];
+    const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+
+    // Crear el documento XMI
+    let xmlContent = '<?xml version="1.0" encoding="windows-1252"?>\n';
+    xmlContent += '<XMI xmi.version="1.1" xmlns:UML="omg.org/UML1.3" timestamp="' + timestamp + '">\n';
+    xmlContent += '  <XMI.header>\n';
+    xmlContent += '    <XMI.documentation>\n';
+    xmlContent += '      <XMI.exporter>Enterprise Architect</XMI.exporter>\n';
+    xmlContent += '      <XMI.exporterVersion>2.5</XMI.exporterVersion>\n';
+    xmlContent += '    </XMI.documentation>\n';
+    xmlContent += '  </XMI.header>\n';
+    xmlContent += '  <XMI.content>\n';
+
+    // Modelo principal con ID único
+    const modelId = this.generateEAID();
+    xmlContent += `    <UML:Model name="EA Model" xmi.id="MX_EAID_${modelId}">\n`;
+    xmlContent += '      <UML:Namespace.ownedElement>\n';
+    xmlContent += '        <UML:Class name="EARootClass" xmi.id="EAID_11111111_5487_4080_A7F4_41526CB0AA00" isRoot="true" isLeaf="false" isAbstract="false"/>\n';
+
+    // Package principal
+    const packageId = this.generateEAID();
+    xmlContent += `        <UML:Package name="${diagramName}" xmi.id="EAPK_${packageId}" isRoot="false" isLeaf="false" isAbstract="false" visibility="public">\n`;
+    xmlContent += '          <UML:ModelElement.taggedValue>\n';
+    xmlContent += `            <UML:TaggedValue tag="parent" value="EAPK_${modelId}"/>\n`;
+    xmlContent += `            <UML:TaggedValue tag="created" value="${timestamp}"/>\n`;
+    xmlContent += `            <UML:TaggedValue tag="modified" value="${timestamp}"/>\n`;
+    xmlContent += '            <UML:TaggedValue tag="iscontrolled" value="FALSE"/>\n';
+    xmlContent += `            <UML:TaggedValue tag="lastloaddate" value="${timestamp}"/>\n`;
+    xmlContent += `            <UML:TaggedValue tag="lastsavedate" value="${timestamp}"/>\n`;
+    xmlContent += '            <UML:TaggedValue tag="version" value="1.0"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="isprotected" value="FALSE"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="usedtd" value="FALSE"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="logxml" value="FALSE"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="tpos" value="2"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="package_name" value="System"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="phase" value="1.0"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="status" value="Proposed"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="complexity" value="1"/>\n';
+    xmlContent += '            <UML:TaggedValue tag="ea_stype" value="Public"/>\n';
+    xmlContent += '          </UML:ModelElement.taggedValue>\n';
+    xmlContent += '          <UML:Namespace.ownedElement>\n';
+
+    // Elementos: Interfaces y Clases
+    const classIds = new Map<string, string>();
+    nodes.forEach(node => {
+      const classId = this.generateEAID();
+      classIds.set(node.key, classId);
+
+      if (node.isInterface) {
+        xmlContent += `            <UML:Interface name="${node.name}" xmi.id="EAID_${classId}" visibility="public" namespace="EAPK_${packageId}" isRoot="false" isLeaf="false" isAbstract="true">\n`;
+      } else {
+        xmlContent += `            <UML:Class name="${node.name}" xmi.id="EAID_${classId}" visibility="public" namespace="EAPK_${packageId}" isRoot="false" isLeaf="false" isAbstract="false" isActive="false">\n`;
+      }
+
+      xmlContent += '              <UML:ModelElement.taggedValue>\n';
+      xmlContent += '                <UML:TaggedValue tag="isSpecification" value="false"/>\n';
+      xmlContent += `                <UML:TaggedValue tag="ea_stype" value="${node.isInterface ? 'Interface' : 'Class'}"/>\n`;
+      xmlContent += '                <UML:TaggedValue tag="ea_ntype" value="0"/>\n';
+      xmlContent += `                <UML:TaggedValue tag="version" value="1.0"/>\n`;
+      xmlContent += `                <UML:TaggedValue tag="package" value="EAPK_${packageId}"/>\n`;
+      xmlContent += `                <UML:TaggedValue tag="date_created" value="${timestamp}"/>\n`;
+      xmlContent += `                <UML:TaggedValue tag="date_modified" value="${timestamp}"/>\n`;
+      xmlContent += '                <UML:TaggedValue tag="gentype" value="Java"/>\n';
+      xmlContent += '                <UML:TaggedValue tag="tagged" value="0"/>\n';
+      xmlContent += `                <UML:TaggedValue tag="package_name" value="${diagramName}"/>\n`;
+      xmlContent += '                <UML:TaggedValue tag="phase" value="1.0"/>\n';
+      xmlContent += `                <UML:TaggedValue tag="complexity" value="1"/>\n`;
+      xmlContent += `                <UML:TaggedValue tag="status" value="Proposed"/>\n`;
+      xmlContent += '              </UML:ModelElement.taggedValue>\n';
+
+      if (node.properties.length > 0 || node.methods.length > 0) {
+        xmlContent += '              <UML:Classifier.feature>\n';
+        // Propiedades
+        node.properties.forEach(prop => {
+          xmlContent += `                <UML:Attribute name="${prop.name}" visibility="${this.convertVisibility(prop.visibility)}" type="${prop.type}">\n`;
+          if (prop.default) {
+            xmlContent += '                  <UML:Attribute.initialValue>\n';
+            xmlContent += `                    <UML:Expression body="${prop.default}"/>\n`;
+            xmlContent += '                  </UML:Attribute.initialValue>\n';
+          }
+          xmlContent += '                </UML:Attribute>\n';
+        });
+
+        // Métodos
+        node.methods.forEach(method => {
+          xmlContent += `                <UML:Operation name="${method.name}" visibility="${this.convertVisibility(method.visibility)}" isAbstract="false" concurrency="sequential">\n`;
+          if (method.parameters && method.parameters.length > 0) {
+            xmlContent += '                  <UML:BehavioralFeature.parameters>\n';
+            method.parameters.forEach(param => {
+              xmlContent += `                    <UML:Parameter name="${param.name}" type="${param.type}" kind="in"/>\n`;
+            });
+            if (method.type) {
+              xmlContent += `                    <UML:Parameter kind="return" type="${method.type}"/>\n`;
+            }
+            xmlContent += '                  </UML:BehavioralFeature.parameters>\n';
+          }
+          xmlContent += '                </UML:Operation>\n';
+        });
+        xmlContent += '              </UML:Classifier.feature>\n';
+      }
+      xmlContent += node.isInterface ? '            </UML:Interface>\n' : '            </UML:Class>\n';
+    });
+
+    // Relaciones
+    links.forEach(link => {
+      const fromClassId = classIds.get(link.from);
+      const toClassId = classIds.get(link.to);
+
+      if (fromClassId && toClassId) {
+        xmlContent += this.createRelationshipXML(link, fromClassId, toClassId);
+      }
+    });
+
+    xmlContent += '          </UML:Namespace.ownedElement>\n';
+    xmlContent += '        </UML:Package>\n';
+    xmlContent += '      </UML:Namespace.ownedElement>\n';
+    xmlContent += '    </UML:Model>\n';
+
+    // Diagrama
+    const diagramId = this.generateEAID();
+    xmlContent += `    <UML:Diagram name="${diagramName}" xmi.id="EAID_${diagramId}" diagramType="ClassDiagram" owner="EAPK_${packageId}" toolName="Enterprise Architect 2.5">\n`;
+    xmlContent += '      <UML:ModelElement.taggedValue>\n';
+    xmlContent += '        <UML:TaggedValue tag="version" value="1.0"/>\n';
+    xmlContent += `        <UML:TaggedValue tag="author" value="${diagramName}"/>\n`;
+    xmlContent += `        <UML:TaggedValue tag="created_date" value="${timestamp}"/>\n`;
+    xmlContent += `        <UML:TaggedValue tag="modified_date" value="${timestamp}"/>\n`;
+    xmlContent += `        <UML:TaggedValue tag="package" value="EAPK_${packageId}"/>\n`;
+    xmlContent += '        <UML:TaggedValue tag="type" value="Logical"/>\n';
+    xmlContent += '        <UML:TaggedValue tag="swimlanes" value="locked=false;orientation=0;width=0;inbar=false;names=false;color=0;bold=false;fcol=0;tcol=-1;ofCol=-1;ufCol=-1;hl=0;ufh=0;cls=0;SwimlaneFont=lfh:-13,lfw:0,lfi:0,lfu:0,lfs:0,lfface:Calibri,lfe:0,lfo:0,lfchar:1,lfop=0,lfcp:0,lfq:0,lfpf=0,lfWidth=0;"/>\n';
+    xmlContent += '        <UML:TaggedValue tag="matrixitems" value="locked=false;matrixactive=false;swimlanesactive=true;kanbanactive=false;width=1;clrLine=0;"/>\n';
+    xmlContent += '        <UML:TaggedValue tag="ea_localid" value="2"/>\n';
+    xmlContent += '        <UML:TaggedValue tag="EAStyle" value="ShowPrivate=1;ShowProtected=1;ShowPublic=1;HideRelationships=0;Locked=0;Border=0;HighlightForeign=0;PackageContents=0;SequenceNotes=0;ScalePrintImage=0;PPgs.cx=0;PPgs.cy=0;DocSize.cx=795;DocSize.cy=1138;ShowDetails=0;Orientation=P;Zoom=100;ShowTags=0;OpParams=1;VisibleAttributeDetail=0;ShowOpRetType=1;ShowIcons=1;CollabNums=0;HideProps=0;ShowReqs=0;ShowCons=0;PaperSize=9;HideParents=0;UseAlias=0;HideAtts=0;HideOps=0;HideStereo=0;HideElemStereo=0;ShowTests=0;ShowMaint=0;ConnectorNotation=UML 2.1;ExplicitNavigability=0;ShowShape=1;AdvancedElementProps=1;AdvancedFeatureProps=1;AdvancedConnectorProps=1;m_bElementClassifier=1;ShowNotes=0;SuppressBrackets=0;SuppConnectorLabels=0;PrintPageHeadFoot=0;ShowAsList=0;"/>\n';
+    xmlContent += '        <UML:TaggedValue tag="styleex" value="SaveTag=1AB69F91;ExcludeRTF=0;DocAll=0;HideQuals=0;AttPkg=1;ShowTests=0;ShowMaint=0;SuppressFOC=1;MatrixActive=0;SwimlanesActive=1;KanbanActive=0;MatrixLineWidth=1;MatrixLineClr=0;MatrixLocked=0;TConnectorNotation=UML 2.1;TExplicitNavigability=0;AdvancedElementProps=1;AdvancedFeatureProps=1;AdvancedConnectorProps=1;m_bElementClassifier=1;ProfileData=;MDGDgm=;STBLDgm=;ShowNotes=0;VisibleAttributeDetail=0;ShowOpRetType=1;SuppressBrackets=0;SuppConnectorLabels=0;PrintPageHeadFoot=0;ShowAsList=0;SuppressedCompartments=;Theme=:119;"/>\n';
+    xmlContent += '      </UML:ModelElement.taggedValue>\n';
+    // Elementos del diagrama
+    xmlContent += '      <UML:Diagram.element>\n';
+
+    // Nodos con sus posiciones
+    nodes.forEach((node, index) => {
+      const left = 200 + (index * 200);
+      const top = 200;
+      const right = left + 90;
+      const bottom = top + 70;
+      const classId = classIds.get(node.key);
+
+      xmlContent += `        <UML:DiagramElement geometry="Left=${left};Top=${top};Right=${right};Bottom=${bottom};" subject="EAID_${classId}" seqno="${index + 1}" style="DUID=${this.generateEAID()};"/>`;
+    });
+
+    // Enlaces en el diagrama
+    links.forEach((link, index) => {
+      const relationId = this.generateEAID();
+      const fromClassId = classIds.get(link.from);
+      const toClassId = classIds.get(link.to);
+
+      if (fromClassId && toClassId) {
+        const style = this.getLinkStyle(link.relationship);
+        xmlContent += `        <UML:DiagramElement geometry="${style}" subject="EAID_${relationId}" seqno="${nodes.length + index + 1}" style="Mode=3;EOID=EAID_${toClassId};SOID=EAID_${fromClassId};Color=-1;LWidth=0;Hidden=0;"/>\n`;
+      }
+    });
+
+    xmlContent += '      </UML:Diagram.element>\n';
+    xmlContent += '    </UML:Diagram>\n';
+    xmlContent += '  </XMI.content>\n';
+    xmlContent += '  <XMI.difference/>\n';
+    xmlContent += '  <XMI.extensions xmi.extender="Enterprise Architect 2.5">\n';
+    xmlContent += '    <EAModel.paramSub/>\n';
+    xmlContent += '  </XMI.extensions>\n';
+    xmlContent += '</XMI>';
+
+    // Crear y descargar el archivo XML
+    const blob = new Blob([xmlContent], { type: 'application/xml' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${diagramName}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
+  private generateEAID(): string {
+    return Math.random().toString(36).substr(2, 8).toUpperCase();
+  }
+
+  private convertVisibility(visibility: string): string {
+    const map: { [key: string]: string } = {
+      'public': 'Public',
+      'private': 'Private',
+      'protected': 'Protected',
+      'package': 'Package'
+    };
+    return map[visibility] || 'Public';
+  }
+
+  private getLinkStyle(relationship: string | undefined): string {
+    switch (relationship) {
+      case 'Inheritance':
+        return 'EDGE=1;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;Path=;';
+      case 'Realization':
+        return 'EDGE=3;$LLB=;LLT=;LMT=;LMB=CX=54:CY=15:OX=-1:OY=-12:HDN=0:BLD=0:ITA=0:UND=0:CLR=-1:ALN=0:DIR=0:ROT=0;LRT=;LRB=;Path=;';
+      case 'Dependency':
+        return 'EDGE=2;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;Path=;';
+      case 'Association':
+        return 'EDGE=2;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;IRHS=;ILHS=;Path=;';
+      case 'Aggregation':
+        return 'EDGE=2;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;IRHS=;ILHS=;Path=;';
+      case 'Composition':
+        return 'EDGE=3;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;IRHS=;ILHS=;Path=;';
+      default:
+        return 'EDGE=2;$LLB=;LLT=;LMT=;LMB=;LRT=;LRB=;IRHS=;ILHS=;Path=;';
+    }
+  }
+
+  private createRelationshipXML(link: DiagramLink, fromClassId: string, toClassId: string): string {
+    let xmlContent = '';
+    const relationId = this.generateEAID();
+
+    switch (link.relationship) {
+      case 'Inheritance':
+        xmlContent += `
+                <UML:Generalization xmi.id="EAID_${relationId}" 
+                    subtype="EAID_${fromClassId}" 
+                    supertype="EAID_${toClassId}" 
+                    visibility="public">
+                    <UML:ModelElement.taggedValue>
+                        <UML:TaggedValue tag="style" value="3"/>
+                        <UML:TaggedValue tag="ea_type" value="Generalization"/>
+                    </UML:ModelElement.taggedValue>
+                </UML:Generalization>`;
+        break;
+
+      case 'Realization':
+        xmlContent += `
+                <UML:Dependency xmi.id="EAID_${relationId}" 
+                    client="EAID_${fromClassId}" 
+                    supplier="EAID_${toClassId}" 
+                    visibility="public">
+                    <UML:ModelElement.stereotype>
+                        <UML:Stereotype name="realize"/>
+                    </UML:ModelElement.stereotype>
+                    <UML:ModelElement.taggedValue>
+                        <UML:TaggedValue tag="style" value="3"/>
+                        <UML:TaggedValue tag="ea_type" value="Realisation"/>
+                    </UML:ModelElement.taggedValue>
+                </UML:Dependency>`;
+        break;
+
+      case 'Dependency':
+        xmlContent += `
+                <UML:Dependency xmi.id="EAID_${relationId}" 
+                    client="EAID_${fromClassId}" 
+                    supplier="EAID_${toClassId}" 
+                    visibility="public">
+                    <UML:ModelElement.taggedValue>
+                        <UML:TaggedValue tag="style" value="3"/>
+                        <UML:TaggedValue tag="ea_type" value="Dependency"/>
+                    </UML:ModelElement.taggedValue>
+                </UML:Dependency>`;
+        break;
+
+        case 'Association':
+            xmlContent += `
+                <UML:Association xmi.id="EAID_${relationId}" visibility="public" isRoot="false" isLeaf="false" isAbstract="false">
+                    <UML:ModelElement.taggedValue>
+                        <UML:TaggedValue tag="style" value="3"/>
+                        <UML:TaggedValue tag="ea_type" value="Association"/>
+                        <UML:TaggedValue tag="direction" value="Source -&gt; Destination"/>
+                        <UML:TaggedValue tag="linemode" value="3"/>
+                        <UML:TaggedValue tag="linecolor" value="-1"/>
+                        <UML:TaggedValue tag="linewidth" value="0"/>
+                        <UML:TaggedValue tag="seqno" value="0"/>
+                        <UML:TaggedValue tag="headStyle" value="0"/>
+                        <UML:TaggedValue tag="lineStyle" value="0"/>
+                        <UML:TaggedValue tag="virtualInheritance" value="0"/>
+                    </UML:ModelElement.taggedValue>
+                    <UML:Association.connection>
+                        <UML:AssociationEnd visibility="public" aggregation="none" isOrdered="false" targetScope="instance" changeable="none" isNavigable="false" type="EAID_${fromClassId}">
+                            <UML:ModelElement.taggedValue>
+                                <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                <UML:TaggedValue tag="sourcestyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+                                <UML:TaggedValue tag="ea_end" value="source"/>
+                            </UML:ModelElement.taggedValue>
+                        </UML:AssociationEnd>
+                        <UML:AssociationEnd visibility="public" aggregation="none" isOrdered="false" targetScope="instance" changeable="none" isNavigable="true" type="EAID_${toClassId}">
+                            <UML:ModelElement.taggedValue>
+                                <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                <UML:TaggedValue tag="deststyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Navigable;"/>
+                                <UML:TaggedValue tag="ea_end" value="target"/>
+                            </UML:ModelElement.taggedValue>
+                        </UML:AssociationEnd>
+                    </UML:Association.connection>
+                </UML:Association>`;
+            break;
+
+            case 'Aggregation':
+              // Aggregation to Whole - rombo en el source
+              xmlContent += `
+                  <UML:Association xmi.id="EAID_${relationId}" visibility="public" isRoot="false" isLeaf="false" isAbstract="false">
+                      <UML:ModelElement.taggedValue>
+                          <UML:TaggedValue tag="style" value="3"/>
+                          <UML:TaggedValue tag="ea_type" value="Aggregation"/>
+                          <UML:TaggedValue tag="direction" value="Source -&gt; Destination"/>
+                          <UML:TaggedValue tag="linemode" value="3"/>
+                          <UML:TaggedValue tag="linecolor" value="-1"/>
+                          <UML:TaggedValue tag="linewidth" value="0"/>
+                          <UML:TaggedValue tag="seqno" value="0"/>
+                          <UML:TaggedValue tag="headStyle" value="0"/>
+                          <UML:TaggedValue tag="lineStyle" value="0"/>
+                          <UML:TaggedValue tag="virtualInheritance" value="0"/>
+                      </UML:ModelElement.taggedValue>
+                      <UML:Association.connection>
+                          <UML:AssociationEnd visibility="public" aggregation="shared" isOrdered="false" targetScope="instance" changeable="none" isNavigable="false" type="EAID_${fromClassId}">
+                              <UML:ModelElement.taggedValue>
+                                  <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                  <UML:TaggedValue tag="sourcestyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Navigable;"/>
+                                  <UML:TaggedValue tag="ea_end" value="source"/>
+                              </UML:ModelElement.taggedValue>
+                          </UML:AssociationEnd>
+                          <UML:AssociationEnd visibility="public" aggregation="none" isOrdered="false" targetScope="instance" changeable="none" isNavigable="true" type="EAID_${toClassId}">
+                              <UML:ModelElement.taggedValue>
+                                  <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                  <UML:TaggedValue tag="deststyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+                                  <UML:TaggedValue tag="ea_end" value="target"/>
+                              </UML:ModelElement.taggedValue>
+                          </UML:AssociationEnd>
+                      </UML:Association.connection>
+                  </UML:Association>`;
+              break;
   
-  exportDiagram() {
-    const modelJson = this.diagram.model.toJson();
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(modelJson);
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "class-diagram.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+          case 'Composition':
+              // Composition to Whole - rombo relleno en el source
+              xmlContent += `
+                  <UML:Association xmi.id="EAID_${relationId}" visibility="public" isRoot="false" isLeaf="false" isAbstract="false">
+                      <UML:ModelElement.taggedValue>
+                          <UML:TaggedValue tag="style" value="3"/>
+                          <UML:TaggedValue tag="ea_type" value="Aggregation"/>
+                          <UML:TaggedValue tag="direction" value="Source -&gt; Destination"/>
+                          <UML:TaggedValue tag="linemode" value="3"/>
+                          <UML:TaggedValue tag="linecolor" value="-1"/>
+                          <UML:TaggedValue tag="linewidth" value="0"/>
+                          <UML:TaggedValue tag="seqno" value="0"/>
+                          <UML:TaggedValue tag="subtype" value="Strong"/>
+                          <UML:TaggedValue tag="headStyle" value="0"/>
+                          <UML:TaggedValue tag="lineStyle" value="0"/>
+                          <UML:TaggedValue tag="virtualInheritance" value="0"/>
+                      </UML:ModelElement.taggedValue>
+                      <UML:Association.connection>
+                          <UML:AssociationEnd visibility="public" aggregation="composite" isOrdered="false" targetScope="instance" changeable="none" isNavigable="false" type="EAID_${fromClassId}">
+                              <UML:ModelElement.taggedValue>
+                                  <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                  <UML:TaggedValue tag="sourcestyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Navigable;"/>
+                                  <UML:TaggedValue tag="ea_end" value="source"/>
+                              </UML:ModelElement.taggedValue>
+                          </UML:AssociationEnd>
+                          <UML:AssociationEnd visibility="public" aggregation="none" isOrdered="false" targetScope="instance" changeable="none" isNavigable="true" type="EAID_${toClassId}">
+                              <UML:ModelElement.taggedValue>
+                                  <UML:TaggedValue tag="containment" value="Unspecified"/>
+                                  <UML:TaggedValue tag="deststyle" value="Union=0;Derived=0;AllowDuplicates=0;Owned=0;Navigable=Unspecified;"/>
+                                  <UML:TaggedValue tag="ea_end" value="target"/>
+                              </UML:ModelElement.taggedValue>
+                          </UML:AssociationEnd>
+                      </UML:Association.connection>
+                  </UML:Association>`;
+              break;
+    }
+
+    return xmlContent;
   }
 
   importDiagram(event: Event) {
