@@ -1,0 +1,60 @@
+<mat-drawer #drawer class="collaboration-drawer" mode="over" position="end">
+  <div class="panel-container">
+    <!-- Header -->
+    <div class="panel-header">
+      <h2>Colaboradores</h2>
+      <button mat-icon-button (click)="drawer.close()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Content -->
+    <div class="panel-content">
+      @if (users().length === 0) {
+        <div class="empty-state">
+          <mat-icon>group</mat-icon>
+          <p>No hay usuarios conectados</p>
+        </div>
+      } @else {
+        <div class="users-list">
+          @for (user of users(); track user.email) {
+            <mat-card class="user-card">
+              <mat-card-content>
+                <!-- User Info -->
+                <div class="user-header">
+                  <div class="user-info">
+                    <span class="status-indicator" [class.online]="user.isActive"></span>
+                    <span class="user-email">{{ user.email }}</span>
+                  </div>
+                  @if (user.isCreator) {
+                    <mat-chip-set>
+                      <mat-chip highlighted color="primary">Anfitrión</mat-chip>
+                    </mat-chip-set>
+                  }
+                </div>
+
+                <!-- Permissions Section -->
+                @if (isCreator() && user.email !== currentUserEmail()) {
+                  <mat-divider class="permission-divider"></mat-divider>
+                  <div class="permissions-section">
+                    <h3>Permisos</h3>
+                    @for (permission of permissions; track permission.key) {
+                      <mat-checkbox 
+                        [checked]="user.permissions[permission.key]"
+                        (change)="onPermissionChange(permission.key, user)"
+                        color="primary">
+                        {{ permission.label }}
+                      </mat-checkbox>
+                    }
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</mat-drawer>

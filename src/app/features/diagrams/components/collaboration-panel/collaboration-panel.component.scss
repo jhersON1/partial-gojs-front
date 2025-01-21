@@ -1,0 +1,105 @@
+.collaboration-drawer {
+  width: 360px;
+  max-width: 90vw;
+  background-color: #fafafa;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.panel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.panel-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: white;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+}
+
+.panel-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: rgba(0, 0, 0, 0.6);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-card {
+  background-color: white;
+  border-radius: 8px;
+
+  .user-header {
+    margin-bottom: 12px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-email {
+    font-weight: 500;
+    flex-grow: 1;
+  }
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #bdbdbd;
+
+  &.online {
+    background-color: #4caf50;
+  }
+}
+
+.permission-divider {
+  margin: 12px 0;
+}
+
+.permissions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+
+  mat-checkbox {
+    margin: 4px 0;
+  }
+}

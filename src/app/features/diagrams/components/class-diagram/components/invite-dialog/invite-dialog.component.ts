@@ -9,6 +9,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ValidationsService } from '../../services/validation.service';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CollaborationService } from '../../../../../../shared/services/collaboration.service';
+import { UserPermissions } from '../../../../../../core/interfaces';
 
 interface InvitationPermissions {
   allowEditing: boolean;
@@ -27,21 +29,22 @@ export class InviteDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly validationsService = inject(ValidationsService);
   private readonly userService = inject(UserService);
-  private readonly editorService = inject(EditorService);
+  //private readonly editorService = inject(EditorService);
   private readonly dialogRef = inject(MatDialogRef<InviteDialogComponent>);
   private readonly snackBar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly collaborationService = inject(CollaborationService);
   
   protected invitationForm!: FormGroup;
   protected showUrlSection = false;
   protected collaborationUrl = '';
   protected isProcessing = false;
   protected verifiedEmails: Set<string> = new Set();
-  protected readonly defaultPermissions: InvitationPermissions = {
-    allowEditing: true,
-    allowInviting: false,
-    allowDeleting: false
+  protected readonly defaultPermissions: UserPermissions = {
+    canEdit: true,
+    canInvite: false,
+    canManagePermissions: false
   };
 
   ngOnInit(): void {
@@ -52,7 +55,9 @@ export class InviteDialogComponent {
   private initializeForm(): void {
     this.invitationForm = this.fb.group({
       invitations: this.fb.array([]),
-      ...this.defaultPermissions
+      canEdit: [this.defaultPermissions.canEdit],
+      canInvite: [this.defaultPermissions.canInvite],
+      canManagePermissions: [this.defaultPermissions.canManagePermissions]
     });
     this.addInvitation();
   }
@@ -142,11 +147,15 @@ export class InviteDialogComponent {
         .map(control => control.get('email')?.value)
         .filter(Boolean);
 
-      const currentContent = await this.editorService.getCurrentContent();
-      const sessionId = await this.editorService.initializeCollaborativeSession(
+      const permissions: UserPermissions = {
+        canEdit: this.invitationForm.get('canEdit')?.value,
+        canInvite: this.invitationForm.get('canInvite')?.value,
+        canManagePermissions: this.invitationForm.get('canManagePermissions')?.value
+      };
+
+      const sessionId = await this.collaborationService.initializeCollaborativeSession(
         invitedEmails,
-        currentContent,
-        this.invitationForm.value as InvitationPermissions
+        permissions
       );
 
       this.collaborationUrl = this.generateCollaborationUrl(sessionId);
