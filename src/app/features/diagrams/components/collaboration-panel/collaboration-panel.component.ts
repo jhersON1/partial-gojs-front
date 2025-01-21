@@ -5,10 +5,12 @@ import { CollaborationUser, PermissionKey, CollaborationUpdate, UserPermissions 
 import { CollaborationService } from '../../../../shared/services/collaboration.service';
 import { MaterialModules } from '../../../../shared/material.module';
 import { MatDrawer } from '@angular/material/sidenav';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-collaboration-panel',
-  imports: [MaterialModules],
+  imports: [MaterialModules, CommonModule],
   templateUrl: './collaboration-panel.component.html',
   styleUrl: './collaboration-panel.component.scss'
 })
@@ -17,6 +19,7 @@ export class CollaborationPanelComponent implements OnInit {
   
   private collaborationService = inject(CollaborationService);
   private authService = inject(AuthService);
+  private snackBar = inject(MatSnackBar);
 
   users = signal<CollaborationUser[]>([]);
   currentUserEmail = signal<string>('');
@@ -25,66 +28,92 @@ export class CollaborationPanelComponent implements OnInit {
   permissions = [
     { key: 'canEdit' as PermissionKey, label: 'Editar diagrama' },
     { key: 'canInvite' as PermissionKey, label: 'Invitar usuarios' },
-    { key: 'canChangePermissions' as PermissionKey, label: 'Gestionar permisos' }
+    { key: 'canManagePermissions' as PermissionKey, label: 'Gestionar permisos' }
   ];
 
   ngOnInit() {
+    console.log('CollaborationPanelComponent initializing...');
     const currentUser = this.authService.currentUser();
     if (currentUser) {
+      console.log('Current user:', currentUser.email);
       this.currentUserEmail.set(currentUser.email);
-      this.isCreator.set(currentUser.email === this.collaborationService.getCreatorEmail());
+      const creatorEmail = this.collaborationService.getCreatorEmail();
+      console.log('Creator email:', creatorEmail);
+      this.isCreator.set(currentUser.email === creatorEmail);
     }
 
     this.setupCollaborationUpdates();
   }
 
   private setupCollaborationUpdates(): void {
-    this.collaborationService.getUserUpdates().subscribe(update => {
-      switch (update.type) {
-        case 'USER_JOINED':
-          this.handleUserJoined(update.data);
-          break;
-        case 'USER_LEFT':
-          this.handleUserLeft(update.data);
-          break;
-        case 'PERMISSIONS_CHANGED':
-          this.handlePermissionsChanged(update.data);
-          break;
-      }
+    console.log('Setting up collaboration updates...');
+    this.collaborationService.getUserUpdates().subscribe({
+      next: (update) => {
+        console.log('Received update:', update);
+        switch (update.type) {
+          case 'USER_JOINED':
+            this.handleUserJoined(update.data);
+            break;
+          case 'USER_LEFT':
+            this.handleUserLeft(update.data);
+            break;
+          case 'PERMISSIONS_CHANGED':
+            this.handlePermissionsChanged(update.data);
+            break;
+        }
+      },
+      error: (error) => console.error('Error in collaboration updates:', error)
     });
   }
 
   private handleUserJoined(data: any): void {
-    const currentUsers = this.users();
-    if (Array.isArray(data.activeUsers)) {
-      const updatedUsers = data.activeUsers.map((email: string) => ({
-        email,
-        isActive: true,
-        permissions: data.permissions || this.getDefaultPermissions(),
-        lastActivity: Date.now(),
-        isCreator: email === this.collaborationService.getCreatorEmail()
-      }));
-      this.users.set(updatedUsers);
-    }
+    console.log('Handling user joined:', data);
+    const updatedUsers = data.activeUsers?.map((email: string) => ({
+      email,
+      isActive: true,
+      permissions: data.permissions || this.getDefaultPermissions(),
+      lastActivity: Date.now(),
+      isCreator: email === this.collaborationService.getCreatorEmail()
+    })) || [];
+    console.log('Updated users list:', updatedUsers);
+    this.users.set(updatedUsers);
   }
 
   private handleUserLeft(data: any): void {
-    const currentUsers = this.users();
-    const updatedUsers = currentUsers.map(user => 
+    console.log('Handling user left:', data);
+    const updatedUsers = this.users().map(user => 
       user.email === data.userEmail ? { ...user, isActive: false } : user
     );
     this.users.set(updatedUsers);
   }
 
   private handlePermissionsChanged(data: any): void {
-    const currentUsers = this.users();
-    const updatedUsers = currentUsers.map(user =>
+    console.log('Handling permissions changed:', data);
+    const updatedUsers = this.users().map(user =>
       user.email === data.userEmail ? { ...user, permissions: data.permissions } : user
     );
     this.users.set(updatedUsers);
+    
+    if (data.userEmail === this.currentUserEmail()) {
+      this.showPermissionUpdateNotification(data.permissions);
+    }
+  }
+
+  private showPermissionUpdateNotification(permissions: any): void {
+    this.snackBar.open('Tus permisos han sido actualizados', 'Cerrar', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
+    });
   }
 
   async onPermissionChange(permission: PermissionKey, user: CollaborationUser): Promise<void> {
+    console.log('Permission change requested:', { permission, user });
+    if (!this.isCreator()) {
+      console.log('Not authorized to change permissions');
+      return;
+    }
+
     try {
       const newPermissions = {
         ...user.permissions,
@@ -97,6 +126,10 @@ export class CollaborationPanelComponent implements OnInit {
       );
     } catch (error) {
       console.error('Error updating permissions:', error);
+      this.snackBar.open('Error al actualizar los permisos', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
     }
   }
 
@@ -104,14 +137,16 @@ export class CollaborationPanelComponent implements OnInit {
     return {
       canEdit: true,
       canInvite: false,
-      canChangePermissions: false,
-      canRemoveUsers: false
+      canManagePermissions: false
     };
   }
 
   toggle(): void {
     if (this.drawer) {
+      console.log('Toggling drawer');
       this.drawer.toggle();
+    } else {
+      console.error('Drawer not initialized');
     }
   }
 }

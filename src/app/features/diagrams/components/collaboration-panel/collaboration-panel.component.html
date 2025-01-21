@@ -1,14 +1,16 @@
 <mat-drawer #drawer class="collaboration-drawer" mode="over" position="end">
   <div class="panel-container">
+    <!-- Header -->
     <div class="panel-header">
       <h2>Colaboradores</h2>
-      <button mat-icon-button (click)="drawer.close()" class="close-button">
+      <button mat-icon-button (click)="drawer.close()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
     <mat-divider></mat-divider>
 
+    <!-- Content -->
     <div class="panel-content">
       @if (users().length === 0) {
         <div class="empty-state">
@@ -20,6 +22,7 @@
           @for (user of users(); track user.email) {
             <mat-card class="user-card">
               <mat-card-content>
+                <!-- User Info -->
                 <div class="user-header">
                   <div class="user-info">
                     <span class="status-indicator" [class.online]="user.isActive"></span>
@@ -27,14 +30,16 @@
                   </div>
                   @if (user.isCreator) {
                     <mat-chip-set>
-                      <mat-chip color="primary">Anfitrión</mat-chip>
+                      <mat-chip highlighted color="primary">Anfitrión</mat-chip>
                     </mat-chip-set>
                   }
                 </div>
 
+                <!-- Permissions Section -->
                 @if (isCreator() && user.email !== currentUserEmail()) {
-                  <mat-divider class="my-2"></mat-divider>
+                  <mat-divider class="permission-divider"></mat-divider>
                   <div class="permissions-section">
+                    <h3>Permisos</h3>
                     @for (permission of permissions; track permission.key) {
                       <mat-checkbox 
                         [checked]="user.permissions[permission.key]"

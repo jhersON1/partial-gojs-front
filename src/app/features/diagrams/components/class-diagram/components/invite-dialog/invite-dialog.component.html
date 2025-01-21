@@ -1,161 +1,139 @@
 <!-- invite-dialog.component.html -->
 <div class="dialog-container mat-typography">
-    @if (!showUrlSection) {
-      <div mat-dialog-title class="dialog-title">
-        <h2>Invitar Colaboradores</h2>
-        <p class="subtitle">Comparte tu diagrama con otros usuarios</p>
-      </div>
-  
-      <form [formGroup]="invitationForm" (ngSubmit)="onSubmit()">
-        <div mat-dialog-content class="dialog-content">
-          <!-- Lista de invitaciones -->
-          <div formArrayName="invitations" class="invitations-list">
-            @for (invitation of invitations.controls; track $index) {
-              <div [formGroupName]="$index" class="invitation-item">
-                <mat-form-field appearance="outline" class="email-field">
-                  <mat-label>Email del colaborador</mat-label>
-                  <input matInput
-                         formControlName="email"
-                         [placeholder]="'colaborador' + ($index + 1) + '@example.com'"
-                         [ngClass]="{'error': fieldHasErrors($index)}">
-                  <mat-error>{{ getFieldError($index) }}</mat-error>
-                  @if (verifiedEmails.has(invitation.get('email')?.value)) {
-                    <mat-icon matSuffix class="verified-icon" color="primary"
-                             [matTooltip]="'Email verificado'">
-                      check_circle
-                    </mat-icon>
-                  }
-                </mat-form-field>
-  
-                @if (invitations.length > 1) {
-                  <button mat-icon-button
-                          color="warn"
-                          type="button"
-                          (click)="removeInvitation($index)"
-                          [matTooltip]="'Eliminar invitación'">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                }
-              </div>
-            }
-          </div>
-  
-          <!-- Botón para añadir más invitaciones -->
-          <div class="add-button-container">
-            <button mat-stroked-button
-                    type="button"
-                    (click)="addInvitation()"
-                    color="primary"
-                    [disabled]="invitations.length >= 5">
-              <mat-icon>person_add</mat-icon>
-              Añadir colaborador
-            </button>
-            @if (invitations.length >= 5) {
-              <mat-hint class="limit-hint">
-                Máximo 5 colaboradores por invitación
-              </mat-hint>
-            }
-          </div>
-  
-          <!-- Permisos -->
-          <mat-card class="permissions-card">
-            <mat-card-header>
-              <mat-card-title>
-                <h3>Permisos de colaboradores</h3>
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="permissions-list">
-                <mat-checkbox formControlName="allowEditing" color="primary">
-                  <div class="permission-item">
-                    <span>Permitir edición</span>
-                    <mat-icon [matTooltip]="'Los colaboradores podrán modificar el diagrama'">
-                      info
-                    </mat-icon>
-                  </div>
-                </mat-checkbox>
-  
-                <mat-checkbox formControlName="allowInviting" color="primary">
-                  <div class="permission-item">
-                    <span>Permitir invitar a otros</span>
-                    <mat-icon [matTooltip]="'Los colaboradores podrán invitar a más personas'">
-                      info
-                    </mat-icon>
-                  </div>
-                </mat-checkbox>
-  
-                <mat-checkbox formControlName="allowDeleting" color="primary">
-                  <div class="permission-item">
-                    <span>Permitir eliminar contenido</span>
-                    <mat-icon [matTooltip]="'Los colaboradores podrán eliminar elementos del diagrama'">
-                      info
-                    </mat-icon>
-                  </div>
-                </mat-checkbox>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </div>
-  
-        <div mat-dialog-actions class="dialog-actions">
-          <button mat-button
-                  type="button"
-                  (click)="close()"
-                  [disabled]="isProcessing">
-            Cancelar
-          </button>
-          <button mat-raised-button
-                  color="primary"
-                  type="submit"
-                  [disabled]="invitationForm.invalid || isProcessing">
-            <span class="button-content">
-              <mat-icon>send</mat-icon>
-              Invitar
-              @if (isProcessing) {
-                <mat-spinner diameter="20"></mat-spinner>
-              }
-            </span>
-          </button>
-        </div>
-      </form>
-    } @else {
-      <div mat-dialog-title class="dialog-title success-title">
-        <mat-icon color="primary">check_circle</mat-icon>
-        <h2>¡Invitación creada!</h2>
-      </div>
-  
-      <div mat-dialog-content class="dialog-content">
-        <p class="url-instructions">Comparte este enlace con tus colaboradores:</p>
-        
-        <div class="url-container">
-          <mat-form-field appearance="outline" class="url-field">
-            <input matInput
-                   [value]="collaborationUrl"
-                   readonly>
-          </mat-form-field>
-          
-          <button mat-icon-button
-                  (click)="copyUrl()"
-                  [matTooltip]="'Copiar URL'"
-                  color="primary">
-            <mat-icon>content_copy</mat-icon>
-          </button>
-        </div>
-        
-        <div class="info-section">
-          <mat-icon color="primary">info</mat-icon>
-          <p class="info-text">
-            Los colaboradores deberán iniciar sesión para acceder al diagrama.
-          </p>
-        </div>
-      </div>
-  
-      <div mat-dialog-actions class="dialog-actions">
-        <button mat-raised-button
-                color="primary"
-                (click)="close()">
-          Continuar
-        </button>
-      </div>
-    }
+  @if (!showUrlSection) {
+  <div mat-dialog-title class="dialog-title">
+    <h2>Invitar Colaboradores</h2>
+    <p class="subtitle">Comparte tu diagrama con otros usuarios</p>
   </div>
+
+  <form [formGroup]="invitationForm" (ngSubmit)="onSubmit()">
+    <div mat-dialog-content class="dialog-content">
+      <!-- Lista de invitaciones -->
+      <div formArrayName="invitations" class="invitations-list">
+        @for (invitation of invitations.controls; track $index) {
+        <div [formGroupName]="$index" class="invitation-item">
+          <mat-form-field appearance="outline" class="email-field">
+            <mat-label>Email del colaborador</mat-label>
+            <input matInput formControlName="email" [placeholder]="'colaborador' + ($index + 1) + '@example.com'"
+              [ngClass]="{'error': fieldHasErrors($index)}">
+            <mat-error>{{ getFieldError($index) }}</mat-error>
+            @if (verifiedEmails.has(invitation.get('email')?.value)) {
+            <mat-icon matSuffix class="verified-icon" color="primary" [matTooltip]="'Email verificado'">
+              check_circle
+            </mat-icon>
+            }
+          </mat-form-field>
+
+          @if (invitations.length > 1) {
+          <button mat-icon-button color="warn" type="button" (click)="removeInvitation($index)"
+            [matTooltip]="'Eliminar invitación'">
+            <mat-icon>close</mat-icon>
+          </button>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Botón para añadir más invitaciones -->
+      <div class="add-button-container">
+        <button mat-stroked-button type="button" (click)="addInvitation()" color="primary"
+          [disabled]="invitations.length >= 5">
+          <mat-icon>person_add</mat-icon>
+          Añadir colaborador
+        </button>
+        @if (invitations.length >= 5) {
+        <mat-hint class="limit-hint">
+          Máximo 5 colaboradores por invitación
+        </mat-hint>
+        }
+      </div>
+
+      <!-- Permisos -->
+      <mat-card class="permissions-card">
+        <mat-card-header>
+          <mat-card-title>
+            <h3>Permisos de colaboradores</h3>
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="permissions-list">
+            <mat-checkbox formControlName="canEdit" color="primary">
+              <div class="permission-item">
+                <span>Editar diagrama</span>
+                <mat-icon [matTooltip]="'Los colaboradores podrán modificar el diagrama'">
+                  info
+                </mat-icon>
+              </div>
+            </mat-checkbox>
+
+            <mat-checkbox formControlName="canInvite" color="primary">
+              <div class="permission-item">
+                <span>Invitar usuarios</span>
+                <mat-icon [matTooltip]="'Los colaboradores podrán invitar a más personas'">
+                  info
+                </mat-icon>
+              </div>
+            </mat-checkbox>
+
+            <mat-checkbox formControlName="canManagePermissions" color="primary">
+              <div class="permission-item">
+                <span>Gestionar permisos</span>
+                <mat-icon [matTooltip]="'Los colaboradores podrán modificar permisos de otros usuarios'">
+                  info
+                </mat-icon>
+              </div>
+            </mat-checkbox>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div mat-dialog-actions class="dialog-actions">
+      <button mat-button type="button" (click)="close()" [disabled]="isProcessing">
+        Cancelar
+      </button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="invitationForm.invalid || isProcessing">
+        <span class="button-content">
+          <mat-icon>send</mat-icon>
+          Invitar
+          @if (isProcessing) {
+          <mat-spinner diameter="20"></mat-spinner>
+          }
+        </span>
+      </button>
+    </div>
+  </form>
+  } @else {
+  <div mat-dialog-title class="dialog-title success-title">
+    <mat-icon color="primary">check_circle</mat-icon>
+    <h2>¡Invitación creada!</h2>
+  </div>
+
+  <div mat-dialog-content class="dialog-content">
+    <p class="url-instructions">Comparte este enlace con tus colaboradores:</p>
+
+    <div class="url-container">
+      <mat-form-field appearance="outline" class="url-field">
+        <input matInput [value]="collaborationUrl" readonly>
+      </mat-form-field>
+
+      <button mat-icon-button (click)="copyUrl()" [matTooltip]="'Copiar URL'" color="primary">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+    </div>
+
+    <div class="info-section">
+      <mat-icon color="primary">info</mat-icon>
+      <p class="info-text">
+        Los colaboradores deberán iniciar sesión para acceder al diagrama.
+      </p>
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-raised-button color="primary" (click)="close()">
+      Continuar
+    </button>
+  </div>
+  }
+</div>

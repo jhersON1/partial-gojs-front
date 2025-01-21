@@ -63,10 +63,7 @@
   border-radius: 8px;
 
   .user-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
 
   .user-info {
@@ -77,6 +74,7 @@
 
   .user-email {
     font-weight: 500;
+    flex-grow: 1;
   }
 }
 
@@ -91,15 +89,17 @@
   }
 }
 
+.permission-divider {
+  margin: 12px 0;
+}
+
 .permissions-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 8px 0;
-}
 
-:host ::ng-deep {
-  .mat-mdc-checkbox {
+  mat-checkbox {
     margin: 4px 0;
   }
 }

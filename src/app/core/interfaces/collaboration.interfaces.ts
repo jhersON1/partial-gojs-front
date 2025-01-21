@@ -1,11 +1,11 @@
-export type PermissionKey = 'canEdit' | 'canInvite' | 'canChangePermissions' | 'canRemoveUsers';
+export type PermissionKey = 'canEdit' | 'canInvite' | 'canManagePermissions';
 
 export interface UserPermissions {
     canEdit: boolean;
     canInvite: boolean;
-    canChangePermissions: boolean;
-    canRemoveUsers: boolean;
+    canManagePermissions: boolean;
 }
+
 
 export interface CollaborationUser {
     email: string;
