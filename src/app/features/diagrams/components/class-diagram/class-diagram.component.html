@@ -41,15 +41,22 @@
 
       <!-- Definición del menú -->
       <mat-menu #fileMenu="matMenu">
-        <button mat-menu-item (click)="exportDiagram()">
+        <button mat-menu-item (click)="exportDiagram()" matTooltip="Generar xml para entrepise architect">
           <mat-icon>file_download</mat-icon>
           <span>Exportar Diagrama</span>
         </button>
-        <button mat-menu-item (click)="fileInput.click()">
+        <button mat-menu-item (click)="fileInput.click()" matTooltip="Importa xml de entrepise architect">
           <mat-icon>file_upload</mat-icon>
           <span>Importar Diagrama</span>
         </button>
+
+        <button mat-menu-item color="primary" (click)="generateSpringProject()"
+          matTooltip="Generar proyecto Spring Boot">
+          <mat-icon>code</mat-icon>
+          Spring Boot
+        </button>
       </mat-menu>
+
 
       <!-- Input oculto para subir archivos -->
       <input #fileInput type="file" (change)="importDiagram($event)" style="display: none" accept=".json">

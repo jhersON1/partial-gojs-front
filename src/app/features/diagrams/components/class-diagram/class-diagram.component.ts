@@ -15,6 +15,7 @@ import { InviteDialogComponent } from './components/invite-dialog/invite-dialog.
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CollaborationPanelComponent } from '../collaboration-panel/collaboration-panel.component';
 import { CollaborationService } from '../../../../shared/services/collaboration.service';
+import { SpringGeneratorService } from './services/spring-generator.service';
 
 @Component({
   selector: 'app-class-diagram',
@@ -37,6 +38,7 @@ export class ClassDiagramComponent implements OnInit {
   private route: ActivatedRoute = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
   private collaborationService = inject(CollaborationService);
+  private springGeneratorService = inject(SpringGeneratorService);
 
   selectedLinkType: string = 'Association';
 
@@ -768,6 +770,34 @@ export class ClassDiagramComponent implements OnInit {
       this.collaborationPanel.toggle();
     } else {
       console.error('Collaboration panel not found');
+    }
+  }
+
+  generateSpringProject(): void {
+    const model = this.diagram.model as go.GraphLinksModel;
+    const nodes = model.nodeDataArray as DiagramNode[];
+    const links = model.linkDataArray as DiagramLink[];
+
+    try {
+      const model = this.diagram.model as go.GraphLinksModel;
+      const nodes = model.nodeDataArray as DiagramNode[];
+      const links = model.linkDataArray as DiagramLink[];
+    
+      // Elegimos el primer nodo para la prueba
+      if (nodes.length > 0) {
+        const sampleNode = nodes[0];
+        const entityContent = this.springGeneratorService.generateEntity(sampleNode);
+        console.log('Entidad generada:');
+        console.log(entityContent);
+      
+      }
+    } catch (error) {
+      console.error('Error generating Spring project:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo generar el proyecto Spring Boot.'
+      });
     }
   }
 
