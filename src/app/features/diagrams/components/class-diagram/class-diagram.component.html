@@ -30,6 +30,34 @@
       </mat-form-field>
     </div>
 
+    <mat-divider [vertical]="true"></mat-divider>
+
+    <div class="toolbar-section">
+      <!-- Botón que abre el menú -->
+      <button mat-button [matMenuTriggerFor]="fileMenu">
+        <mat-icon>folder</mat-icon>
+        Archivo
+      </button>
+
+      <!-- Definición del menú -->
+      <mat-menu #fileMenu="matMenu">
+        <button mat-menu-item (click)="exportDiagram()">
+          <mat-icon>file_download</mat-icon>
+          <span>Exportar Diagrama</span>
+        </button>
+        <button mat-menu-item (click)="fileInput.click()">
+          <mat-icon>file_upload</mat-icon>
+          <span>Importar Diagrama</span>
+        </button>
+      </mat-menu>
+
+      <!-- Input oculto para subir archivos -->
+      <input #fileInput type="file" (change)="importDiagram($event)" style="display: none" accept=".json">
+
+    </div>
+
+    <mat-divider [vertical]="true"></mat-divider>
+
     <span class="toolbar-spacer"></span>
 
     @if (!isCollaborativeMode) {
