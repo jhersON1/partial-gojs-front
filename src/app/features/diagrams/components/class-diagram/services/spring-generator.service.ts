@@ -26,6 +26,68 @@ export class SpringGeneratorService {
         'bool': 'Boolean'
     };
 
+    // private async readMavenWrapperFiles(): Promise<{ [key: string]: Uint8Array }> {
+    //     if (typeof window === 'undefined' || !('fs' in window)) {
+    //         console.error('window.fs no está disponible');
+    //         return {};
+    //     }
+    
+    //     const fs = (window as any).fs;
+    //     console.log('fs disponible:', fs);
+    
+    //     const wrapperFiles: { [key: string]: Uint8Array } = {};
+        
+    //     try {
+    //         wrapperFiles['mvnw'] = await fs.readFile('mvnw');
+    //         wrapperFiles['mvnw.cmd'] = await fs.readFile('mvnw.cmd');
+    //         wrapperFiles['.mvn/wrapper/maven-wrapper.properties'] = await fs.readFile('.mvn/wrapper/maven-wrapper.properties');
+            
+    //         // Opcional: manejar el .jar cuando esté listo
+    //         // wrapperFiles['.mvn/wrapper/maven-wrapper.jar'] = await fs.readFile('.mvn/wrapper/maven-wrapper.jar');
+            
+    //         return wrapperFiles;
+    //     } catch (error) {
+    //         console.error('Error específico leyendo archivo:', error);
+    //         throw new Error(`Error leyendo archivos del Maven Wrapper: ${(error as Error).message}`);
+    //     }
+    // }
+
+    private async readMavenWrapperFiles(): Promise<{ [key: string]: Uint8Array }> {
+        try {
+            const wrapperFiles: { [key: string]: Uint8Array } = {};
+    
+            // Rutas relativas a la carpeta de recursos estáticos
+            const filePaths = [
+                'mvnw',
+                'mvnw.cmd',
+                '.mvn/wrapper/maven-wrapper.properties',
+                // Opcional: incluir el archivo .jar si es necesario
+                // 'assets/maven-wrapper/maven-wrapper.jar',
+            ];
+    
+            for (const path of filePaths) {
+                // Usamos fetch para obtener los archivos desde los recursos estáticos
+                const response = await fetch(path);
+    
+                if (!response.ok) {
+                    console.error(`Error al leer el archivo ${path}: ${response.statusText}`);
+                    throw new Error(`No se pudo leer el archivo ${path}`);
+                }
+    
+                // Convertimos el archivo a un Uint8Array para manejar binarios
+                const blob = await response.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                wrapperFiles[path.split('/').pop() || 'unknown'] = new Uint8Array(arrayBuffer);
+            }
+    
+            return wrapperFiles;
+        } catch (error) {
+            console.error('Error al leer los archivos del Maven Wrapper:', error);
+            throw new Error('Error al leer los archivos del Maven Wrapper');
+        }
+    }
+
+    
     async generateSpringProject(nodes: DiagramNode[], links: DiagramLink[]): Promise<void> {
         console.log('SpringGeneratorService: Iniciando generación');
         
@@ -35,11 +97,14 @@ export class SpringGeneratorService {
 
         try {
             console.log('SpringGeneratorService: Generando archivos');
-            const files = this.generateFiles(nodes, links);
+            const files = await this.generateFiles(nodes, links);
             
             if (!files || Object.keys(files).length === 0) {
                 throw new Error('No se pudieron generar los archivos');
             }
+
+            // Agregar Dockerfile
+            files['Dockerfile'] = this.generateDockerfile();
 
             console.log('SpringGeneratorService: Archivos generados, creando ZIP');
             await this.createAndDownloadZip(files);
@@ -52,9 +117,15 @@ export class SpringGeneratorService {
         }
     }
 
-    private generateFiles(nodes: DiagramNode[], links: DiagramLink[]): { [key: string]: string } {
+    private async generateFiles(nodes: DiagramNode[], links: DiagramLink[]): Promise<{ [key: string]: Uint8Array | string }> {
         try {
+
+            const wrapperFiles = await this.readMavenWrapperFiles();
+
             const files: { [key: string]: string } = {
+
+                ...wrapperFiles,
+
                 'pom.xml': this.generatePomXml(),
                 'src/main/java/com/example/demo/Application.java': this.generateMainClass(),
                 'src/main/resources/application.properties': this.generateApplicationProperties()
@@ -106,7 +177,13 @@ export class SpringGeneratorService {
     
     # JPA Configuration
     spring.jpa.hibernate.ddl-auto=update
-    spring.jpa.show-sql=true`;
+    spring.jpa.show-sql=true
+    
+    # Application Type
+    spring.main.web-application-type=servlet
+    
+    # Server Configuration
+    server.port=8080`;
     }
 
     // Métodos auxiliares que implementaremos después
@@ -124,7 +201,7 @@ export class SpringGeneratorService {
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.2</version>
+        <version>3.4.1</version>
         <relativePath/>
     </parent>
     
@@ -135,7 +212,7 @@ export class SpringGeneratorService {
     <description>Project generated from UML diagram</description>
     
     <properties>
-        <java.version>17</java.version>
+        <java.version>23</java.version>
     </properties>
     
     <dependencies>
@@ -199,11 +276,9 @@ export class SpringGeneratorService {
         const className = this.formatClassName(node.name);
         const properties = this.generateEntityProperties(node.properties);
 
-        // Crear mapa de nodos para el generador de relaciones
         const nodesMap = new Map<number, string>();
         allNodes.forEach(n => nodesMap.set(n.key, this.formatClassName(n.name)));
 
-        // Generar relaciones usando el servicio inyectado
         const relations = this.relationGenerator.generateRelations(links, nodesMap);
         const classRelations = relations.get(className) || [];
 
@@ -211,7 +286,6 @@ export class SpringGeneratorService {
         const classDefinitionExtends = classRelations.find(r => r.startsWith('extends'));
         const classAnnotations = classRelations.filter(r => r.startsWith('@') && !r.includes('('));
         const fieldRelations = classRelations.filter(r => r.includes('private') || (r.startsWith('@') && r.includes('(')));
-
 
         return `package com.example.demo.entities;
 
@@ -238,6 +312,8 @@ public class ${className}${classDefinitionExtends ? ` ${classDefinitionExtends}`
 ${properties}
 
 ${fieldRelations.join('\n\n')}
+
+    // Getters y Setters generados por Lombok
 }`;
     }
 
@@ -390,7 +466,28 @@ ${fieldRelations.join('\n\n')}
     }`;
     }
 
-    private async createAndDownloadZip(files: { [key: string]: string }): Promise<void> {
+    private generateDockerfile(): string {
+        return `# Stage 1: Build the application
+    FROM eclipse-temurin:23-jdk as builder
+    WORKDIR /app
+    COPY . .
+    RUN ./mvnw clean package -DskipTests
+    
+    # Stage 2: Run the application
+    FROM eclipse-temurin:23-jre
+    WORKDIR /app
+    COPY --from=builder /app/target/*.jar app.jar
+    EXPOSE 8080
+    
+    # Configurar variables de entorno
+    ENV SPRING_PROFILES_ACTIVE=default
+    ENV JAVA_OPTS="-XX:+UseContainerSupport"
+    
+    # Command to run the application 
+    ENTRYPOINT ["java", "-jar", "app.jar"]`;
+    }
+
+    private async createAndDownloadZip(files: { [key: string]: string | Uint8Array }): Promise<void> {
         console.log('createAndDownloadZip: Iniciando');
         
         if (!files || Object.keys(files).length === 0) {
