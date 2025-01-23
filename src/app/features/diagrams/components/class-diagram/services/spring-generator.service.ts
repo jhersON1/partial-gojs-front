@@ -146,25 +146,30 @@ export class SpringGeneratorService {
 
     private generateApplicationProperties(): string {
         return `# H2 Database Configuration
-    spring.datasource.url=jdbc:h2:mem:testdb
-    spring.datasource.driverClassName=org.h2.Driver
-    spring.datasource.username=sa
-    spring.datasource.password=
-    spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-    
-    # Enable H2 Console
-    spring.h2.console.enabled=true
-    spring.h2.console.path=/h2-console
-    
-    # JPA Configuration
-    spring.jpa.hibernate.ddl-auto=update
-    spring.jpa.show-sql=true
-    
-    # Application Type
-    spring.main.web-application-type=servlet
-    
-    # Server Configuration
-    server.port=8080`;
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+
+# H2 Console Config
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+spring.h2.console.settings.web-allow-others=true
+
+# JPA Config
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Server Config
+server.port=8080
+spring.main.web-application-type=servlet
+
+# Security Config para desarrollo
+spring.security.user.name=admin
+spring.security.user.password=admin
+    `;
     }
 
     // Métodos auxiliares que implementaremos después
