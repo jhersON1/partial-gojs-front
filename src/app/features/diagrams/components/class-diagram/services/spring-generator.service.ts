@@ -119,43 +119,50 @@ export class SpringGeneratorService {
 
     private async generateFiles(nodes: DiagramNode[], links: DiagramLink[]): Promise<{ [key: string]: Uint8Array | string }> {
         try {
-
+            const files: { [key: string]: string | Uint8Array } = {};
+            
+            // Obtener archivos del wrapper
             const wrapperFiles = await this.readMavenWrapperFiles();
-
-            const files: { [key: string]: string } = {
-
-                ...wrapperFiles,
-
-                'pom.xml': this.generatePomXml(),
-                'src/main/java/com/example/demo/Application.java': this.generateMainClass(),
-                'src/main/resources/application.properties': this.generateApplicationProperties()
-            };
-
+            
+            // Manejar archivos del wrapper preservando la estructura
+            for (const [filename, content] of Object.entries(wrapperFiles)) {
+                if (filename === 'maven-wrapper.properties') {
+                    files['.mvn/wrapper/maven-wrapper.properties'] = content;
+                } else {
+                    files[filename] = content;
+                }
+            }
+    
+            // Agregar otros archivos del proyecto
+            files['pom.xml'] = this.generatePomXml();
+            files['src/main/java/com/example/demo/Application.java'] = this.generateMainClass();
+            files['src/main/resources/application.properties'] = this.generateApplicationProperties();
+    
             // Generar archivos para cada nodo
             nodes.forEach(node => {
                 if (!node.name) {
                     console.warn('Nodo sin nombre encontrado, saltando...');
                     return;
                 }
-
+    
                 const className = this.formatClassName(node.name);
                 const relevantLinks = links.filter(link => 
                     link.from === node.key || link.to === node.key
                 );
-
+    
                 files[`src/main/java/com/example/demo/entities/${className}.java`] =
                     this.generateEntity(node, relevantLinks, nodes);
-
+    
                 files[`src/main/java/com/example/demo/repositories/${className}Repository.java`] =
                     this.generateRepository(className);
-
+    
                 files[`src/main/java/com/example/demo/services/${className}Service.java`] =
                     this.generateService(className);
-
+    
                 files[`src/main/java/com/example/demo/controllers/${className}Controller.java`] =
                     this.generateController(className);
             });
-
+    
             return files;
         } catch (error) {
             console.error('Error generando archivos:', error);
@@ -272,49 +279,52 @@ export class SpringGeneratorService {
     }`;
     }
 
-    public generateEntity(node: DiagramNode, links: DiagramLink[], allNodes: DiagramNode[]): string {
+    private generateEntity(node: DiagramNode, links: DiagramLink[], allNodes: DiagramNode[]): string {
         const className = this.formatClassName(node.name);
         const properties = this.generateEntityProperties(node.properties);
-
+    
         const nodesMap = new Map<number, string>();
         allNodes.forEach(n => nodesMap.set(n.key, this.formatClassName(n.name)));
-
+    
         const relations = this.relationGenerator.generateRelations(links, nodesMap);
         const classRelations = relations.get(className) || [];
-
+    
+        // Separar los diferentes tipos de relaciones
         const imports = classRelations.filter(r => r.startsWith('import'));
         const classDefinitionExtends = classRelations.find(r => r.startsWith('extends'));
-        const classAnnotations = classRelations.filter(r => r.startsWith('@') && !r.includes('('));
-        const fieldRelations = classRelations.filter(r => r.includes('private') || (r.startsWith('@') && r.includes('(')));
-
-        return `package com.example.demo.entities;
-
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
-import java.util.*;
-${imports.join('\n')}
-
-@Entity
-@Table(name = "${this.formatTableName(node.name)}")
-@Getter
-@Setter
-@NoArgsConstructor
-${classAnnotations.join('\n')}
-public class ${className}${classDefinitionExtends ? ` ${classDefinitionExtends}` : ''} {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+        const fieldRelations = classRelations.filter(r => 
+            (r.startsWith('@OneToOne') || r.startsWith('@ManyToOne') || 
+             r.startsWith('@OneToMany') || r.startsWith('@JoinColumn')) ||
+            r.includes('private')
+        );
     
-${properties}
-
-${fieldRelations.join('\n\n')}
-
-    // Getters y Setters generados por Lombok
-}`;
+        return `package com.example.demo.entities;
+    
+    import jakarta.persistence.*;
+    import lombok.Getter;
+    import lombok.Setter;
+    import lombok.NoArgsConstructor;
+    import java.time.LocalDateTime;
+    import java.util.*;
+    ${imports.join('\n')}
+    
+    @Entity
+    @Table(name = "${this.formatTableName(node.name)}")
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public class ${className}${classDefinitionExtends ? ` ${classDefinitionExtends}` : ''} {
+    
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
+        
+    ${properties}
+    
+    ${fieldRelations.join('\n')}
+    
+        // Getters y Setters generados por Lombok
+    }`;
     }
 
     private formatTableName(name: string): string {
@@ -326,20 +336,22 @@ ${fieldRelations.join('\n\n')}
 
     //todo: implementar interfaz para properties
     private generateEntityProperties(properties: any): string {
-        return properties.map((prop: { type: string; name: string; visibility: string; }) => {
-            const javaType = this.mapToJavaType(prop.type);
-            const columnName = this.formatColumnName(prop.name);
-
-            let result = '';
-
-            // Si es privado o protegido, agregamos la anotación Column
-            if (prop.visibility !== 'public') {
-                result += `    @Column(name = "${columnName}")\n`;
-            }
-
-            result += `    private ${javaType} ${prop.name};`;
-            return result;
-        }).join('\n\n');
+        return properties
+            .filter((prop: { name: string; }) => prop.name.toLowerCase() !== 'id')  // Excluir campos llamados 'id'
+            .map((prop: { type: string; name: string; visibility: string; }) => {
+                const javaType = this.mapToJavaType(prop.type);
+                const columnName = this.formatColumnName(prop.name);
+    
+                let result = '';
+    
+                // Si es privado o protegido, agregamos la anotación Column
+                if (prop.visibility !== 'public') {
+                    result += `    @Column(name = "${columnName}")\n`;
+                }
+    
+                result += `    private ${javaType} ${prop.name};`;
+                return result;
+            }).join('\n\n');
     }
 
     private formatColumnName(name: string): string {
@@ -468,7 +480,7 @@ ${fieldRelations.join('\n\n')}
 
     private generateDockerfile(): string {
         return `# Stage 1: Build the application
-    FROM eclipse-temurin:23-jdk as builder
+    FROM eclipse-temurin:23-jdk AS builder
     WORKDIR /app
     COPY . .
     RUN ./mvnw clean package -DskipTests
