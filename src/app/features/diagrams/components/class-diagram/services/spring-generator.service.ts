@@ -29,7 +29,7 @@ export class SpringGeneratorService {
     private async readMavenWrapperFiles(): Promise<{ [key: string]: Uint8Array }> {
         try {
             const wrapperFiles: { [key: string]: Uint8Array } = {};
-    
+
             // Rutas relativas a la carpeta de recursos estáticos
             const filePaths = [
                 'mvnw',
@@ -38,22 +38,22 @@ export class SpringGeneratorService {
                 // Opcional: incluir el archivo .jar si es necesario
                 // 'assets/maven-wrapper/maven-wrapper.jar',
             ];
-    
+
             for (const path of filePaths) {
                 // Usamos fetch para obtener los archivos desde los recursos estáticos
                 const response = await fetch(path);
-    
+
                 if (!response.ok) {
                     console.error(`Error al leer el archivo ${path}: ${response.statusText}`);
                     throw new Error(`No se pudo leer el archivo ${path}`);
                 }
-    
+
                 // Convertimos el archivo a un Uint8Array para manejar binarios
                 const blob = await response.blob();
                 const arrayBuffer = await blob.arrayBuffer();
                 wrapperFiles[path.split('/').pop() || 'unknown'] = new Uint8Array(arrayBuffer);
             }
-    
+
             return wrapperFiles;
         } catch (error) {
             console.error('Error al leer los archivos del Maven Wrapper:', error);
@@ -61,10 +61,10 @@ export class SpringGeneratorService {
         }
     }
 
-    
+
     async generateSpringProject(nodes: DiagramNode[], links: DiagramLink[]): Promise<void> {
         console.log('SpringGeneratorService: Iniciando generación');
-        
+
         if (!nodes || nodes.length === 0) {
             throw new Error('No hay clases para generar');
         }
@@ -72,7 +72,7 @@ export class SpringGeneratorService {
         try {
             console.log('SpringGeneratorService: Generando archivos');
             const files = await this.generateFiles(nodes, links);
-            
+
             if (!files || Object.keys(files).length === 0) {
                 throw new Error('No se pudieron generar los archivos');
             }
@@ -83,7 +83,7 @@ export class SpringGeneratorService {
             console.log('SpringGeneratorService: Archivos generados, creando ZIP');
             await this.createAndDownloadZip(files);
             console.log('SpringGeneratorService: ZIP creado y descargado');
-            
+
             return Promise.resolve();
         } catch (error) {
             console.error('SpringGeneratorService: Error durante la generación:', error);
@@ -94,10 +94,10 @@ export class SpringGeneratorService {
     private async generateFiles(nodes: DiagramNode[], links: DiagramLink[]): Promise<{ [key: string]: Uint8Array | string }> {
         try {
             const files: { [key: string]: string | Uint8Array } = {};
-            
+
             // Obtener archivos del wrapper
             const wrapperFiles = await this.readMavenWrapperFiles();
-            
+
             // Manejar archivos del wrapper preservando la estructura
             for (const [filename, content] of Object.entries(wrapperFiles)) {
                 if (filename === 'maven-wrapper.properties') {
@@ -106,37 +106,37 @@ export class SpringGeneratorService {
                     files[filename] = content;
                 }
             }
-    
+
             // Agregar otros archivos del proyecto
             files['pom.xml'] = this.generatePomXml();
             files['src/main/java/com/example/demo/Application.java'] = this.generateMainClass();
             files['src/main/resources/application.properties'] = this.generateApplicationProperties();
-    
+
             // Generar archivos para cada nodo
             nodes.forEach(node => {
                 if (!node.name) {
                     console.warn('Nodo sin nombre encontrado, saltando...');
                     return;
                 }
-    
+
                 const className = this.formatClassName(node.name);
-                const relevantLinks = links.filter(link => 
+                const relevantLinks = links.filter(link =>
                     link.from === node.key || link.to === node.key
                 );
-    
+
                 files[`src/main/java/com/example/demo/entities/${className}.java`] =
                     this.generateEntity(node, relevantLinks, nodes);
-    
+
                 files[`src/main/java/com/example/demo/repositories/${className}Repository.java`] =
                     this.generateRepository(className);
-    
+
                 files[`src/main/java/com/example/demo/services/${className}Service.java`] =
                     this.generateService(className);
-    
+
                 files[`src/main/java/com/example/demo/controllers/${className}Controller.java`] =
                     this.generateController(className);
             });
-    
+
             return files;
         } catch (error) {
             console.error('Error generando archivos:', error);
@@ -187,7 +187,7 @@ spring.security.user.password=admin
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
+        <version>3.4.2</version>
         <relativePath/>
     </parent>
     
@@ -223,6 +223,13 @@ spring.security.user.password=admin
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.30</version>
+    <scope>provided</scope>
+</dependency>
     </dependencies>
     
     <build>
@@ -239,6 +246,20 @@ spring.security.user.password=admin
                     </excludes>
                 </configuration>
             </plugin>
+
+            <plugin>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-maven-plugin</artifactId>
+    <configuration>
+        <annotationProcessorPaths>
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.30</version>
+            </path>
+        </annotationProcessorPaths>
+    </configuration>
+</plugin>
         </plugins>
     </build>
 </project>`;
@@ -261,21 +282,21 @@ spring.security.user.password=admin
     private generateEntity(node: DiagramNode, links: DiagramLink[], allNodes: DiagramNode[]): string {
         const className = this.formatClassName(node.name);
         const properties = this.generateEntityProperties(node.properties);
-    
+
         const nodesMap = new Map<number, string>();
         allNodes.forEach(n => nodesMap.set(n.key, this.formatClassName(n.name)));
-    
+
         const relations = this.relationGenerator.generateRelations(links, nodesMap);
         const classRelations = relations.get(className) || [];
-    
+
         const imports = classRelations.filter(r => r.startsWith('import'));
         const classDefinitionExtends = classRelations.find(r => r.startsWith('extends'));
-        const fieldRelations = classRelations.filter(r => 
-            (r.startsWith('@OneToOne') || r.startsWith('@ManyToOne') || 
-             r.startsWith('@OneToMany') || r.startsWith('@JoinColumn')) ||
+        const fieldRelations = classRelations.filter(r =>
+            (r.startsWith('@OneToOne') || r.startsWith('@ManyToOne') ||
+                r.startsWith('@OneToMany') || r.startsWith('@JoinColumn')) ||
             r.includes('private')
         );
-    
+
         return `package com.example.demo.entities;
     
     import jakarta.persistence.*;
@@ -323,14 +344,14 @@ spring.security.user.password=admin
             .map((prop: { type: string; name: string; visibility: string; }) => {
                 const javaType = this.mapToJavaType(prop.type);
                 const columnName = this.formatColumnName(prop.name);
-    
+
                 let result = '';
-    
+
                 // Si es privado o protegido, agregamos la anotación Column
                 if (prop.visibility !== 'public') {
                     result += `    @Column(name = "${columnName}")\n`;
                 }
-    
+
                 result += `    private ${javaType} ${prop.name};`;
                 return result;
             }).join('\n\n');
@@ -483,7 +504,7 @@ spring.security.user.password=admin
 
     private async createAndDownloadZip(files: { [key: string]: string | Uint8Array }): Promise<void> {
         console.log('createAndDownloadZip: Iniciando');
-        
+
         if (!files || Object.keys(files).length === 0) {
             throw new Error('No hay archivos para comprimir');
         }
@@ -522,7 +543,7 @@ spring.security.user.password=admin
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-            
+
             console.log('createAndDownloadZip: Descarga completada');
             return Promise.resolve();
         } catch (error) {
