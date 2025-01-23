@@ -26,32 +26,6 @@ export class SpringGeneratorService {
         'bool': 'Boolean'
     };
 
-    // private async readMavenWrapperFiles(): Promise<{ [key: string]: Uint8Array }> {
-    //     if (typeof window === 'undefined' || !('fs' in window)) {
-    //         console.error('window.fs no está disponible');
-    //         return {};
-    //     }
-    
-    //     const fs = (window as any).fs;
-    //     console.log('fs disponible:', fs);
-    
-    //     const wrapperFiles: { [key: string]: Uint8Array } = {};
-        
-    //     try {
-    //         wrapperFiles['mvnw'] = await fs.readFile('mvnw');
-    //         wrapperFiles['mvnw.cmd'] = await fs.readFile('mvnw.cmd');
-    //         wrapperFiles['.mvn/wrapper/maven-wrapper.properties'] = await fs.readFile('.mvn/wrapper/maven-wrapper.properties');
-            
-    //         // Opcional: manejar el .jar cuando esté listo
-    //         // wrapperFiles['.mvn/wrapper/maven-wrapper.jar'] = await fs.readFile('.mvn/wrapper/maven-wrapper.jar');
-            
-    //         return wrapperFiles;
-    //     } catch (error) {
-    //         console.error('Error específico leyendo archivo:', error);
-    //         throw new Error(`Error leyendo archivos del Maven Wrapper: ${(error as Error).message}`);
-    //     }
-    // }
-
     private async readMavenWrapperFiles(): Promise<{ [key: string]: Uint8Array }> {
         try {
             const wrapperFiles: { [key: string]: Uint8Array } = {};
@@ -289,7 +263,6 @@ export class SpringGeneratorService {
         const relations = this.relationGenerator.generateRelations(links, nodesMap);
         const classRelations = relations.get(className) || [];
     
-        // Separar los diferentes tipos de relaciones
         const imports = classRelations.filter(r => r.startsWith('import'));
         const classDefinitionExtends = classRelations.find(r => r.startsWith('extends'));
         const fieldRelations = classRelations.filter(r => 
@@ -318,6 +291,10 @@ export class SpringGeneratorService {
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
         
     ${properties}
     
