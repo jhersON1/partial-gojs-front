@@ -15,6 +15,7 @@ import { InviteDialogComponent } from './components/invite-dialog/invite-dialog.
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CollaborationPanelComponent } from '../collaboration-panel/collaboration-panel.component';
 import { CollaborationService } from '../../../../shared/services/collaboration.service';
+import { SpringGeneratorService } from './services/spring-generator.service';
 
 @Component({
   selector: 'app-class-diagram',
@@ -37,6 +38,7 @@ export class ClassDiagramComponent implements OnInit {
   private route: ActivatedRoute = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
   private collaborationService = inject(CollaborationService);
+  private springGeneratorService = inject(SpringGeneratorService);
 
   selectedLinkType: string = 'Association';
 
@@ -771,6 +773,85 @@ export class ClassDiagramComponent implements OnInit {
     }
   }
 
+  async generateSpringProject(): Promise<void> {
+    try {
+      console.log('1. Iniciando generación del proyecto');
+      const model = this.diagram.model as go.GraphLinksModel;
+      const nodes = model.nodeDataArray as DiagramNode[];
+      const links = model.linkDataArray as DiagramLink[];
+  
+      console.log('2. Nodos encontrados:', nodes.length);
+  
+      if (nodes.length === 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Diagrama vacío',
+          text: 'Por favor, agregue al menos una clase al diagrama.'
+        });
+        return;
+      }
+  
+      // Mostrar indicador de progreso usando una variable para referenciarlo
+      let loadingSwal = Swal.fire({
+        title: 'Generando proyecto',
+        text: 'Por favor espere...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+          Swal.showLoading();
+        }
+      });
+  
+      console.log('3. Modal de carga mostrado');
+  
+      try {
+        console.log('4. Iniciando generación con SpringGeneratorService');
+        // Generamos el proyecto con un timeout para asegurar que no se bloquee
+        await Promise.race([
+          this.springGeneratorService.generateSpringProject(nodes, links),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('La generación del proyecto tomó demasiado tiempo')), 10000)
+          )
+        ]);
+  
+        console.log('5. Proyecto generado correctamente');
+  
+        // Cerramos explícitamente el modal de carga
+        await Swal.close();
+  
+        // Mostramos mensaje de éxito
+        await Swal.fire({
+          icon: 'success',
+          title: 'Proyecto generado',
+          text: 'El proyecto Spring Boot ha sido generado exitosamente.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('6. Error durante la generación:', error);
+        
+        // Cerramos explícitamente el modal de carga
+        await Swal.close();
+
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: (error as Error).message || 'No se pudo generar el proyecto Spring Boot.'
+        });
+      }
+    } catch (error) {
+      console.error('7. Error inesperado:', error);
+      
+      // Aseguramos que el modal de carga se cierre incluso en caso de error
+      await Swal.close();
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error inesperado al generar el proyecto.'
+      });
+    }
+  }
   ngOnDestroy(): void {
     this.gojsService.cleanup(this.diagram, this.palette);
 
