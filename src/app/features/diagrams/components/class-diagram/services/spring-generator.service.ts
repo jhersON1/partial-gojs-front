@@ -282,52 +282,75 @@ spring.security.user.password=admin
     private generateEntity(node: DiagramNode, links: DiagramLink[], allNodes: DiagramNode[]): string {
         const className = this.formatClassName(node.name);
         const properties = this.generateEntityProperties(node.properties);
-
+    
         const nodesMap = new Map<number, string>();
         allNodes.forEach(n => nodesMap.set(n.key, this.formatClassName(n.name)));
-
+    
         const relations = this.relationGenerator.generateRelations(links, nodesMap);
         const classRelations = relations.get(className) || [];
-
+    
         const imports = classRelations.filter(r => r.startsWith('import'));
         const classDefinitionExtends = classRelations.find(r => r.startsWith('extends'));
-        const fieldRelations = classRelations.filter(r =>
-            (r.startsWith('@OneToOne') || r.startsWith('@ManyToOne') ||
-                r.startsWith('@OneToMany') || r.startsWith('@JoinColumn')) ||
+        const fieldRelations = classRelations.filter(r => 
+            (r.startsWith('@OneToOne') || r.startsWith('@ManyToOne') || 
+             r.startsWith('@OneToMany') || r.startsWith('@JoinColumn')) ||
             r.includes('private')
         );
-
+    
+        // Generate getters and setters for all properties
+        const gettersAndSetters = node.properties
+            .filter(prop => prop.name.toLowerCase() !== 'id')
+            .map(prop => {
+                const javaType = this.mapToJavaType(prop.type);
+                return `
+            public ${javaType} get${this.capitalizeFirst(prop.name)}() {
+                return this.${prop.name};
+            }
+    
+            public void set${this.capitalizeFirst(prop.name)}(${javaType} ${prop.name}) {
+                this.${prop.name} = ${prop.name};
+            }`;
+            }).join('\n\n');
+    
         return `package com.example.demo.entities;
     
-    import jakarta.persistence.*;
-    import lombok.Getter;
-    import lombok.Setter;
-    import lombok.NoArgsConstructor;
-    import java.time.LocalDateTime;
-    import java.util.*;
-    ${imports.join('\n')}
+        import jakarta.persistence.*;
+        import lombok.Getter;
+        import lombok.Setter;
+        import lombok.NoArgsConstructor;
+        import java.time.LocalDateTime;
+        import java.util.*;
+        ${imports.join('\n')}
     
-    @Entity
-    @Table(name = "${this.formatTableName(node.name)}")
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public class ${className}${classDefinitionExtends ? ` ${classDefinitionExtends}` : ''} {
+        @Entity
+        @Table(name = "${this.formatTableName(node.name)}")
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        public class ${className}${classDefinitionExtends ? ` ${classDefinitionExtends}` : ''} {
     
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
     
-        public void setId(Long id) {
-            this.id = id;
-        }
-        
-    ${properties}
+            public void setId(Long id) {
+                this.id = id;
+            }
+
+            public Long getId() {
+                return this.id;
+            }
+            
+        ${properties}
     
-    ${fieldRelations.join('\n')}
+        ${fieldRelations.join('\n')}
     
-        // Getters y Setters generados por Lombok
-    }`;
+        ${gettersAndSetters}
+        }`;
+    }
+    
+    private capitalizeFirst(str: string): string {
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     private formatTableName(name: string): string {
