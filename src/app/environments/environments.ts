@@ -1,4 +1,4 @@
 export const environment = {
-  baseUrl: 'http://localhost:3000/api',
-  wsUrl: 'http://127.0.0.1:3000'
+  baseUrl: 'https://test1-back-7sfn.onrender.com/api',
+  wsUrl: 'https://test1-back-7sfn.onrender.com'
 }
