@@ -110,7 +110,7 @@ export class ClassDiagramComponent implements OnInit {
   private initializeDiagram(): void {
     this.diagram = this.gojsService.initializeDiagram(this.diagramDiv.nativeElement);
     this.setupDiagramEvents();
-    //this.loadData();
+    this.loadData();
   }
 
 
