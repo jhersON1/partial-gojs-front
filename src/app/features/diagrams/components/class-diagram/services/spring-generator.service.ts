@@ -96,14 +96,19 @@ export class SpringGeneratorService {
             const files: { [key: string]: string | Uint8Array } = {};
 
             // Obtener archivos del wrapper
+            console.log('Intentando leer archivos del wrapper...');
             const wrapperFiles = await this.readMavenWrapperFiles();
+            console.log('Archivos del wrapper leídos:', Object.keys(wrapperFiles));
 
             // Manejar archivos del wrapper preservando la estructura
             for (const [filename, content] of Object.entries(wrapperFiles)) {
+                console.log(`Contenido de ${filename}:`, content);
                 if (filename === 'maven-wrapper.properties') {
                     files['.mvn/wrapper/maven-wrapper.properties'] = content;
+                    console.log('Guardado en .mvn/wrapper/maven-wrapper.properties');
                 } else {
                     files[filename] = content;
+                    console.log(`Guardado en ${filename}`);
                 }
             }
 
@@ -168,8 +173,7 @@ spring.main.web-application-type=servlet
 
 # Security Config para desarrollo
 spring.security.user.name=admin
-spring.security.user.password=admin
-    `;
+spring.security.user.password=admin`;
     }
 
     // Métodos auxiliares que implementaremos después
@@ -506,28 +510,29 @@ spring.security.user.password=admin
 
     private generateDockerfile(): string {
         return `# Stage 1: Build the application
-    FROM eclipse-temurin:23-jdk AS builder
-    WORKDIR /app
-    COPY . .
-    RUN ./mvnw clean package -DskipTests
-    
-    # Stage 2: Run the application
-    FROM eclipse-temurin:23-jre
-    WORKDIR /app
-    COPY --from=builder /app/target/*.jar app.jar
-    EXPOSE 8080
-    
-    # Configurar variables de entorno
-    ENV SPRING_PROFILES_ACTIVE=default
-    ENV JAVA_OPTS="-XX:+UseContainerSupport"
-    
-    # Command to run the application 
-    ENTRYPOINT ["java", "-jar", "app.jar"]`;
+FROM eclipse-temurin:23-jdk AS builder
+WORKDIR /app
+COPY . .
+# Fix line endings and permissions
+RUN sed -i 's/\r$//' mvnw && \
+    chmod +x mvnw && \
+    ./mvnw clean package -DskipTests
+
+# Stage 2: Run the application
+FROM eclipse-temurin:23-jre
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+EXPOSE 8080
+
+ENV SPRING_PROFILES_ACTIVE=default
+ENV JAVA_OPTS="-XX:+UseContainerSupport"
+
+ENTRYPOINT ["java", "-jar", "app.jar"]`;
     }
 
     private async createAndDownloadZip(files: { [key: string]: string | Uint8Array }): Promise<void> {
         console.log('createAndDownloadZip: Iniciando');
-
+        console.log('Archivos a incluir en el ZIP:', Object.keys(files));
         if (!files || Object.keys(files).length === 0) {
             throw new Error('No hay archivos para comprimir');
         }
